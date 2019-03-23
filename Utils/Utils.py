@@ -1,8 +1,14 @@
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 import numbers
+import os
 
 
 class Utils:
+    '''
+    Linear Congruential Generators parameters(constants) names
+    List would be filled by value after first call of function get_LCG_params_values,
+    each next call this function data wouldn't rewrite values - it would get data from this list
+    '''
     __LCGParamsValues = []
 
     @classmethod
@@ -85,3 +91,24 @@ class Utils:
             else:
                 return False
         return True
+
+    @staticmethod
+    def get_project_root_path():
+        '''
+        Get path of project root folder
+
+        :return: path of project root folder
+        '''
+
+        return os.path.dirname(os.path.dirname(__file__))
+
+    @staticmethod
+    def is_file_exists(file_path):
+        '''
+        Check if file with path exists
+
+        :param file_path: file path for checking
+        :return: boolean value of existing file
+        '''
+
+        return os.path.exists(file_path)
