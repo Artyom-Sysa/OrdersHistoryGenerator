@@ -1,4 +1,5 @@
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
+import numbers
 
 
 class Utils:
@@ -43,3 +44,44 @@ class Utils:
         '''
 
         return sorted(keys_list) == sorted(list(dictionary.keys()))
+
+    @classmethod
+    def is_number(cls, value):
+        '''
+        Determines if value is number
+
+        :param value: value for checking
+        :return: boolean value of checking and number or None otherwise
+        '''
+
+        if isinstance(value, numbers.Number):
+            return True, value
+        else:
+            try:
+                int_cast = int(value, 0)
+                return True, int_cast
+            except:
+                try:
+                    float_cast = float(value)
+                    return True, float_cast
+                except:
+                    return False, None
+
+    @classmethod
+    def is_dictionary_contains_all_number_values(cls, dictionary):
+        '''
+        Determines if all dictionary values is number and try convert it to number if it possible
+
+        :param dictionary: dictionary to check
+        :return: boolean value of checking
+        '''
+
+        for key in dictionary:
+            is_number, value = cls.is_number(dictionary[key])
+
+            if is_number:
+                if value != dictionary[key]:
+                    dictionary[key] = value
+            else:
+                return False
+        return True

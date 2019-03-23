@@ -29,8 +29,40 @@ class LinearCongruentialGenerator(PseudorandomNumberGenerator):
         return None
 
     @classmethod
-    def set_seed(cls, linear_congruential_generator_name, **kwargs):
-        pass
+    def set_seed(cls, linear_congruential_generator_name, seed=None, increment=None, modulus=None, multiplier=None):
+        '''
+        Set passed parameters to concrete LCG setting if that LCG generator exists in generators dictionary
+        Set parameters to LCG setting if at least parameter is number
+
+        :param linear_congruential_generator_name: LCG name
+        :param seed: seed parameter
+        :param increment: increment parameter
+        :param modulus: modulus parameter
+        :param multiplier: multiplier parameter
+        :return: True if at least parameter is number, False otherwise
+        '''
+        if linear_congruential_generator_name in cls.__generators:
+            seed_is_number, seed_value = Utils.is_number(seed)
+            increment_is_number, increment_value = Utils.is_number(seed)
+            modulus_is_number, modulus_value = Utils.is_number(seed)
+            multiplier_is_number, multiplier_value = Utils.is_number(seed)
+
+            if seed_is_number or increment_is_number or modulus_is_number or multiplier_is_number:
+                if seed_is_number:
+                    cls.__generators[linear_congruential_generator_name][LCGParams.SEED.value] = seed_value
+
+                if increment_is_number:
+                    cls.__generators[linear_congruential_generator_name][LCGParams.INCREMENT.value] = increment_value
+
+                if modulus_is_number:
+                    cls.__generators[linear_congruential_generator_name][LCGParams.MODULUS.value] = modulus_value
+
+                if multiplier_is_number:
+                    cls.__generators[linear_congruential_generator_name][
+                        LCGParams.MULTIPLIER.value] = multiplier_is_number
+
+                return True
+        return False
 
     @classmethod
     def set_linear_congruential_generator(cls, generator_name, generator_values_dict):
@@ -43,6 +75,7 @@ class LinearCongruentialGenerator(PseudorandomNumberGenerator):
         '''
 
         if Utils.is_dictionary_contains_all_keys(generator_values_dict, Utils.get_LCG_params_values()):
-            cls.__generators[generator_name] = generator_values_dict
-            return True
+            if Utils.is_dictionary_contains_all_number_values(generator_values_dict):
+                cls.__generators[generator_name] = generator_values_dict
+                return True
         return False
