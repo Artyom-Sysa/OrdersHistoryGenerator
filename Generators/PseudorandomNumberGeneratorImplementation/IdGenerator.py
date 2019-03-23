@@ -1,4 +1,5 @@
 from Generators.PseudorandomNumberGenerator import PseudorandomNumberGenerator
+from Utils.Utils import Utils
 
 '''
     MWC1616
@@ -61,10 +62,25 @@ class IdGenerator(PseudorandomNumberGenerator):
     def set_seed(cls, x=1, y=2, a=18000, b=30903, carry=0xffff):
         '''
         Set MWC1616 algorithm seed
+        Set parameter if that is number
         '''
 
-        cls.__mwc1616_x = x
-        cls.__mwc1616_y = y
-        cls.__mwc1616_a = a
-        cls.__mwc1616_b = b
-        cls.__mwc1616_carry = carry
+        is_number, value = Utils.is_number(x)
+        if is_number:
+            cls.__mwc1616_x = value
+
+        is_number, value = Utils.is_number(y)
+        if is_number:
+            cls.__mwc1616_y = value
+
+        is_number, value = Utils.is_number(a)
+        if is_number:
+            cls.__mwc1616_a = value
+
+        is_number, value = Utils.is_number(b)
+        if is_number:
+            cls.__mwc1616_b = value
+
+        is_number, value = Utils.is_number(carry)
+        if is_number:
+            cls.__mwc1616_carry = value
