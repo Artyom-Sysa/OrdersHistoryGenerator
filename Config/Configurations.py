@@ -1,11 +1,13 @@
 from Decorators.Decorators import singleton
 import os
 
-from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import DefaultPythonLoggingService as Logger
+from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import \
+    DefaultPythonLoggingService as Logger
 from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import LoggingLevel as Level
 
 from Utils.Utils import Utils
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
+
 
 @singleton
 class Configuration:
@@ -154,6 +156,14 @@ class Configuration:
             LCGParams.INCREMENT.value: 45989
         }
 
+        self.currency_pairs = []
+        self.tags = []
+        self.orders_volumes = []
+        self.orders_volumes_for_generation = []
+        self.not_used_orders_amount = 0
+        self.is_current_date_in_trading_period = False
+        self.start_date = None
+
 
 class ValuesNames:
     ORDERS_AMOUNT = 'orders_amount'
@@ -230,3 +240,11 @@ class ValuesNames:
     FIRST_STATUS_POSSIBLE_TIME_GENERATOR = "FIRST_STATUS_POSSIBLE_TIME_GENERATOR"
     SECOND_STATUS_POSSIBLE_TIME_GENERATOR = "SECOND_STATUS_POSSIBLE_TIME_GENERATOR"
     THIRD_STATUS_POSSIBLE_TIME_GENERATOR = "THIRD_STATUS_POSSIBLE_TIME_GENERATOR"
+
+    CURRENCY_PAIR_NAME = "currency pair name"
+    CURRENCY_PAIR_VALUE = "currency pair value"
+
+    TOTAL_ORDERS_VOLUME = 'ORDER_TOTAL_VOLUME'
+    RED_ZONE_VOLUME = 'RED_ZONE_VOLUME'
+    BLUE_ZONE_VOLUME = 'BLUE_ZONE_VOLUME'
+    GREEN_ZONE_VOLUME = 'GREEN_ZONE_VOLUME'

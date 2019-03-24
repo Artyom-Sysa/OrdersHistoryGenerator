@@ -131,7 +131,6 @@ class Utils:
         '''
         return datetime.datetime.today().strftime('%d-%m-%Y')
 
-
     @staticmethod
     def create_folder_if_not_exists(folder_path):
         '''
@@ -142,3 +141,20 @@ class Utils:
                 os.makedirs(folder_path)
         except:
             pass
+
+    @staticmethod
+    def calculate_percent_from_value(value, percent):
+        '''
+        Calculate percent from value
+        '''
+        return percent * value / 100
+
+    @staticmethod
+    def is_int(value):
+        '''
+        Check if value is int by comparing value and value than cast to int
+
+        :param value: value for checking
+        :return: boolean value of checking
+        '''
+        return value == int(value)
