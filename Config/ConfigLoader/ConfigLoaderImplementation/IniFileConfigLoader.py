@@ -7,10 +7,6 @@ import configparser
 
 
 class IniFileConfigLoader(ConfigLoader):
-    __sections_names = {
-        'GENERAL': 'GENERAL',
-        'LOGGER': 'LOGGER'
-    }
 
     def __init__(self):
         self.configuration = Configuration()
