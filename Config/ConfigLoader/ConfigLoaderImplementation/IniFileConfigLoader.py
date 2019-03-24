@@ -37,7 +37,7 @@ class IniFileConfigLoader(ConfigLoader):
                                         allow_no_value=True,
                                         empty_lines_in_values=True)
 
-        cfg.add_section(self.__sections_names['GENERAL'])
+        cfg.add_section(Values.GENERAL_SECTION_NAME)
 
         cfg.set(Values.GENERAL_SECTION_NAME, '; General config section')
         cfg.set(Values.GENERAL_SECTION_NAME, '; DO NOT REMOVE ANY VALUES FROM THIS SECTION')
