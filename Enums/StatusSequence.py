@@ -1,7 +1,7 @@
-from enum import IntEnum
+from enum import Enum
 
 
-class StatusSequence(IntEnum):
-    FILLED = 0
-    PARTIAL_FILLED = 1
-    REJECTED = 2
+class StatusSequence(Enum):
+    FILLED = 'Filled'
+    PARTIAL_FILLED = 'PartialFilled'
+    REJECTED = 'Rejected'

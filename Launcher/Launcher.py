@@ -3,15 +3,15 @@ import logging
 import os
 import re
 
-from Config.Configurations import Configuration
 from Config.ConfigLoader.ConfigLoaderImplementation.IniFileConfigLoader import IniFileConfigLoader
+from Config.Configurations import Configuration
 from Config.Configurations import ValuesNames as Values
+from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
+from Generators.PseudorandomNumberGeneratorImplementation.IdGenerator import IdGenerator
 from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import \
     DefaultPythonLoggingService as Logger
 from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import LoggingLevel as Level
-
 from Utils.Utils import Utils
-from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 
 
 class Launcher:
@@ -221,6 +221,20 @@ class Launcher:
         self.__calculate_orders_period_volumes()
         self.__calculate_orders_volumes_for_generations()
         self.__calculate_first_generation_period_start_date()
+
+    def __calculate_avg_values_of_id(self):
+        id_sum = 0
+        amount = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_AMOUNT]
+
+        x = self.configs.settings[Values.ID_GENERATOR][Values.MWC1616_X]
+        y = self.configs.settings[Values.ID_GENERATOR][Values.MWC1616_Y]
+
+        for i in range(amount):
+            id_sum += IdGenerator().get_next()
+
+        IdGenerator.seed_mwc1616(x, y)
+
+        self.configs.avg_value_of_ids = id_sum / amount
 
 
 if __name__ == '__main__':

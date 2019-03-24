@@ -163,6 +163,7 @@ class Configuration:
         self.not_used_orders_amount = 0
         self.is_current_date_in_trading_period = False
         self.start_date = None
+        self.avg_value_of_ids = 0
 
 
 class ValuesNames:
