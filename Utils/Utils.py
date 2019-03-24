@@ -57,7 +57,7 @@ class Utils:
         Determines if value is number
 
         :param value: value for checking
-        :return: boolean value of checking and number or None otherwise
+        :return: boolean value of checking and number or value otherwise
         '''
 
         if isinstance(value, numbers.Number):
@@ -71,7 +71,7 @@ class Utils:
                     float_cast = float(value)
                     return True, float_cast
                 except:
-                    return False, None
+                    return False, value
 
     @classmethod
     def is_dictionary_contains_all_number_values(cls, dictionary):
