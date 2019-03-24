@@ -1,12 +1,17 @@
 from Decorators.Decorators import singleton
 import os
+
+from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import DefaultPythonLoggingService as Logger
+from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import LoggingLevel as Level
+
 from Utils.Utils import Utils
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
-
 
 @singleton
 class Configuration:
     def __init__(self):
+        Logger.add_to_journal(__file__, Level.INFO, 'Creating instance of Configuration class')
+
         self.settings = {
             ValuesNames.GENERAL_SECTION_NAME: {
                 ValuesNames.ORDERS_AMOUNT: 2000,

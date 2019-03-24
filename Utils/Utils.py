@@ -1,6 +1,7 @@
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 import numbers
 import os
+import datetime
 
 
 class Utils:
@@ -112,3 +113,32 @@ class Utils:
         '''
 
         return os.path.exists(file_path)
+
+    @staticmethod
+    def get_file_name(path):
+        '''
+        Return only file name without extension
+
+        :param path: file path
+        :return: name file only
+        '''
+        return os.path.basename(path).split('.')[0]
+
+    @staticmethod
+    def get_current_date_with_format():
+        '''
+        :return: current date with format
+        '''
+        return datetime.datetime.today().strftime('%d-%m-%Y')
+
+
+    @staticmethod
+    def create_folder_if_not_exists(folder_path):
+        '''
+        Create folder by path if it not exists
+        '''
+        try:
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+        except:
+            pass
