@@ -2,7 +2,25 @@ from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGenera
 from Generators.PseudorandomNumberGenerator import PseudorandomNumberGenerator
 from Utils.Utils import Utils
 
+'''
+All linear congruential generators use this formula:    
+    r(n+1) = a*r(n)+c (mod m)
+Where:
+    r(0) is a seed.
+    r(1),r(2),r(3),... are the random numbers.
+    a, c, m are constants.
 
+If one chooses the values of a, c and m with care, then the generator
+produces a uniform distribution of integers from 0 to m-1
+
+LCG numbers have poor quality. r(n) and r(n+1) are not independent, as true random numbers would be. 
+LCG is not cryptographically secure. 
+
+Among the benefits of the LCG, one can easily reproduce a sequence of numbers, 
+from the same r(0). One can also reproduce such sequence with a different programming language,
+because the formula is so simple.
+
+'''
 class LinearCongruentialGenerator(PseudorandomNumberGenerator):
     __generators = dict()
 

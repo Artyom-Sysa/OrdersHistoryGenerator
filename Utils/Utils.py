@@ -1,8 +1,15 @@
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 import numbers
+import os
+import datetime
 
 
 class Utils:
+    '''
+    Linear Congruential Generators parameters(constants) names
+    List would be filled by value after first call of function get_LCG_params_values,
+    each next call this function data wouldn't rewrite values - it would get data from this list
+    '''
     __LCGParamsValues = []
 
     @classmethod
@@ -51,7 +58,7 @@ class Utils:
         Determines if value is number
 
         :param value: value for checking
-        :return: boolean value of checking and number or None otherwise
+        :return: boolean value of checking and number or value otherwise
         '''
 
         if isinstance(value, numbers.Number):
@@ -65,7 +72,7 @@ class Utils:
                     float_cast = float(value)
                     return True, float_cast
                 except:
-                    return False, None
+                    return False, value
 
     @classmethod
     def is_dictionary_contains_all_number_values(cls, dictionary):
@@ -85,3 +92,69 @@ class Utils:
             else:
                 return False
         return True
+
+    @staticmethod
+    def get_project_root_path():
+        '''
+        Get path of project root folder
+
+        :return: path of project root folder
+        '''
+
+        return os.path.dirname(os.path.dirname(__file__))
+
+    @staticmethod
+    def is_file_exists(file_path):
+        '''
+        Check if file with path exists
+
+        :param file_path: file path for checking
+        :return: boolean value of existing file
+        '''
+
+        return os.path.exists(file_path)
+
+    @staticmethod
+    def get_file_name(path):
+        '''
+        Return only file name without extension
+
+        :param path: file path
+        :return: name file only
+        '''
+        return os.path.basename(path).split('.')[0]
+
+    @staticmethod
+    def get_current_date_with_format():
+        '''
+        :return: current date with format
+        '''
+        return datetime.datetime.today().strftime('%d-%m-%Y')
+
+    @staticmethod
+    def create_folder_if_not_exists(folder_path):
+        '''
+        Create folder by path if it not exists
+        '''
+        try:
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+        except:
+            pass
+
+    @staticmethod
+    def calculate_percent_from_value(value, percent):
+        '''
+        Calculate percent from value
+        '''
+        return percent * value / 100
+
+    @staticmethod
+    def is_int(value):
+        '''
+        Check if value is int by comparing value and value than cast to int
+
+        :param value: value for checking
+        :return: boolean value of checking
+        '''
+        return value == int(value)
