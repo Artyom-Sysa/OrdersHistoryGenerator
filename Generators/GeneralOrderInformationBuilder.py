@@ -112,12 +112,7 @@ class GeneralOrderInformationBuilder:
         return self
 
     def __calculate_sequence_interval_value(self, sequence_gen_value, compr):
-        if sequence_gen_value < compr / 3:
-            return 0
-        elif sequence_gen_value > compr * 2 / 3:
-            return 1
-        else:
-            return 2
+        return Utils.calculate_sequence_interval_value(sequence_gen_value, compr)
 
     def __calculate_init_px_with_currency_pair_and_deviation_percent(self, deviation_percent_value):
         return self.__currency_pair_value + (self.__currency_pair_value * deviation_percent_value / 100)

@@ -221,6 +221,7 @@ class Launcher:
         self.__calculate_orders_period_volumes()
         self.__calculate_orders_volumes_for_generations()
         self.__calculate_first_generation_period_start_date()
+        self.__calculate_avg_values_of_id()
 
     def __calculate_avg_values_of_id(self):
         id_sum = 0

@@ -158,3 +158,12 @@ class Utils:
         :return: boolean value of checking
         '''
         return value == int(value)
+
+    @staticmethod
+    def calculate_sequence_interval_value(sequence_gen_value, compr):
+        if sequence_gen_value < compr / 3:
+            return 0
+        elif sequence_gen_value > compr * 2 / 3:
+            return 1
+        else:
+            return 2
