@@ -25,9 +25,6 @@ class OrderRecord(GeneralOrderInformation):
         self.status = status
         self.ms_timestamp = ms_timestamp
 
-        if status == Status.REJECTED:
-            print('+')
-
         if status in [Status.NEW, Status.TO_PROVIDER, Status.REJECTED]:
             self.fill_volume = 0
             self.fill_currency_pair_value = 0

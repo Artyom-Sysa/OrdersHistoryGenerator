@@ -12,18 +12,28 @@ from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGenera
 from Enums.Status import Status
 from Enums.StatusSequence import StatusSequence
 
+from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import \
+    DefaultPythonLoggingService as Logger
+
 
 class OrderRecordsBuilder:
     def __init__(self):
         self.__order_general_information = None
         self.__configs = Configuration()
 
+        Logger.debug(__file__, 'Init OrderRecordsBuilder instance')
+
     def set_general_order_info(self, general_order_info):
         if isinstance(general_order_info, GeneralOrderInformation):
             self.__order_general_information = general_order_info
+
+            Logger.debug(__file__,
+                         'Set general order info parameter to {}'.format(self.__order_general_information.__str__()))
         return self
 
     def build_order_records_in_green_zone(self, period_index):
+        Logger.debug(__file__, 'Called building order in green zone')
+
         period_start = self.__configs.start_date + datetime.timedelta(days=period_index * 7)
 
         first_status_day_offset, second_status_day_offset, third_status_day_offset = self.__generate_days_statuses_offsets()
@@ -32,10 +42,18 @@ class OrderRecordsBuilder:
         second_status_date = self.__calculate_date(second_status_day_offset, first_status_date)
         third_status_date = self.__calculate_date(third_status_day_offset, second_status_date)
 
+        Logger.debug(__file__,
+                     f'Generated dates for records: {first_status_date}, {second_status_date}, {third_status_date}')
+
         first_status_time, second_status_time, third_status_time = self.__calculate_order_statuses_times(
             first_status_date,
             second_status_date,
             third_status_date)
+
+        Logger.debug(__file__,
+                     f'Generated times for records: {first_status_time}, {second_status_time}, {third_status_time}')
+
+        Logger.debug(__file__, 'Building order records in green zone finished')
 
         return [
             OrderRecord(self.__order_general_information,
@@ -50,14 +68,22 @@ class OrderRecordsBuilder:
         ]
 
     def build_order_records_in_blue_red_zone(self, period_start, period_end):
+        Logger.debug(__file__, 'Called building order in blue-red zone')
+
         first_status_date, second_status_date, third_status_date = \
             self.__calculate_red_blue_zone_order_dates(
                 period_start, period_end)
+
+        Logger.debug(__file__,
+                     f'Generated dates for records: {first_status_date}, {second_status_date}, {third_status_date}')
 
         first_status_time, second_status_time, third_status_time = self.__calculate_order_statuses_times(
             first_status_date,
             second_status_date,
             third_status_date)
+
+        Logger.debug(__file__,
+                     f'Generated times for records: {first_status_time}, {second_status_time}, {third_status_time}')
 
         records = []
 
@@ -75,6 +101,8 @@ class OrderRecordsBuilder:
             records.append(OrderRecord(self.__order_general_information,
                                        self.__generate_ms_datetime(third_status_date, third_status_time),
                                        self.__get_last_status(self.__order_general_information.status_sequence)))
+
+        Logger.debug(__file__, 'Building order records in blue-red zone finished')
 
         return records
 

@@ -12,6 +12,10 @@ from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingServ
     DefaultPythonLoggingService as Logger
 from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import LoggingLevel as Level
 from Utils.Utils import Utils
+from Generators.PseudorandomNumberGeneratorImplementation.LinearCongruentialGenerator import \
+    LinearCongruentialGenerator as LCG
+
+from Generators.OrderHistoryMaker import OrderHistoryMaker
 
 
 class Launcher:
@@ -20,6 +24,7 @@ class Launcher:
         self.__load_configs()
         self.__configurate_logger()
         self.__execute_prepare_configurations_for_generation()
+        self.__execute_generation_order_history()
 
     def __load_configs(self):
         Logger.add_to_journal(__file__, Level.INFO, 'Started load configuration')
@@ -222,8 +227,13 @@ class Launcher:
         self.__calculate_orders_volumes_for_generations()
         self.__calculate_first_generation_period_start_date()
         self.__calculate_avg_values_of_id()
+        self.__register_lcg_generators()
 
     def __calculate_avg_values_of_id(self):
+        '''
+        Calculate id's avg value. Need for calc order direction
+        '''
+
         id_sum = 0
         amount = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_AMOUNT]
 
@@ -233,9 +243,21 @@ class Launcher:
         for i in range(amount):
             id_sum += IdGenerator().get_next()
 
-        IdGenerator.seed_mwc1616(x, y)
+        IdGenerator.set_seed(x, y)
 
         self.configs.avg_value_of_ids = id_sum / amount
+
+    def __register_lcg_generators(self):
+        '''
+        Register all generators setting to LCG generator
+        '''
+
+        for section in self.configs.settings:
+            if 'GENERATOR' in section:
+                LCG.set_linear_congruential_generator(section, self.configs.settings[section])
+
+    def __execute_generation_order_history(self):
+        OrderHistoryMaker().execute_generation()
 
 
 if __name__ == '__main__':
