@@ -1,13 +1,13 @@
-from Enums.Direction import Direction
-from Enums.StatusSequence import StatusSequence
 from Config.Configurations import Configuration
 from Config.Configurations import ValuesNames as Values
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 from Utils.Utils import Utils
-from Entities.GeneralOrderInformation import GeneralOrderInformation
-
-from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import \
+from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
     DefaultPythonLoggingService as Logger
+
+import Entities.GeneralOrderInformation_pb2 as GeneralOrderInformation
+import Entities.Direction_pb2
+import Entities.StatusSequence_pb2
 
 
 class GeneralOrderInformationBuilder:
@@ -32,20 +32,19 @@ class GeneralOrderInformationBuilder:
         Logger.debug(__file__, 'Init new GeneralOrderInformationBuilder instance')
 
     def build(self):
-        order = GeneralOrderInformation(
-            self.__id,
-            self.__direction,
-            self.__status_sequence,
-            self.__currency_pair_name,
-            self.__currency_pair_value,
-            self.__init_currency_pair_value,
-            self.__init_volume,
-            self.__fill_currency_pair_value,
-            self.__fill_volume,
-            self.__statuses_in_blue_zone,
-            self.__tags,
-            self.__description
-        )
+        order = GeneralOrderInformation.GeneralOrderInformation()
+        order.id = self.__id
+        order.direction = self.__direction
+        order.status_sequence = self.__status_sequence
+        order.currency_pair_name = self.__currency_pair_name
+        order.currency_pair_value = self.__currency_pair_value
+        order.init_currency_pair_value = self.__init_currency_pair_value
+        order.init_volume = self.__init_volume
+        order.fill_currency_pair_value = self.__fill_currency_pair_value
+        order.fill_volume = int(self.__fill_volume)
+        order.statuses_in_blue_zone = self.__statuses_in_blue_zone
+        order.tags = self.__tags
+        order.description = self.__description
 
         Logger.debug(__file__, ' Build order {}'.format(order.__str__()))
 
@@ -53,21 +52,22 @@ class GeneralOrderInformationBuilder:
 
     def set_id(self, id):
         self.__id = id
-        self.__direction = Direction.BUY if self.__id <= self.configurations.avg_value_of_ids else Direction.SELL
+        self.__direction = Entities.Direction_pb2.BUY if self.__id <= self.configurations.avg_value_of_ids else Entities.Direction_pb2.SELL
 
         Logger.debug(__file__, 'Set id parameter to {}'.format(self.__id))
-        Logger.debug(__file__, 'Set direction parameter to {}'.format(self.__direction.value))
+        #        Logger.debug(__file__, 'Set direction parameter to {}'.format(self.__direction.value))
 
         return self
 
     def set_status_sequence(self, value):
-        self.__status_sequence = [StatusSequence.FILLED, StatusSequence.PARTIAL_FILLED, StatusSequence.REJECTED][
+        self.__status_sequence = [Entities.StatusSequence_pb2.FILLED, Entities.StatusSequence_pb2.PARTIAL_FILLED,
+                                  Entities.StatusSequence_pb2.REJECTED][
             self.__calculate_sequence_interval_value(
                 value,
                 self.configurations.settings[Values.STATUS_SEQUENCE_GENERATOR][LCGParams.MODULUS.value]
             )]
 
-        Logger.debug(__file__, 'Set status sequence parameter to {}'.format(self.__status_sequence.value))
+        #        Logger.debug(__file__, 'Set status sequence parameter to {}'.format(self.__status_sequence.value))
 
         return self
 
@@ -106,9 +106,9 @@ class GeneralOrderInformationBuilder:
 
     def set_fill_volume(self):
         if self.__fill_volume_deviation_percent is not None and self.__status_sequence is not None:
-            if self.__status_sequence == StatusSequence.REJECTED:
+            if self.__status_sequence == Entities.StatusSequence_pb2.REJECTED:
                 self.__fill_volume = 0
-            elif self.__status_sequence == StatusSequence.FILLED:
+            elif self.__status_sequence == Entities.StatusSequence_pb2.FILLED:
                 self.__fill_volume = self.__init_volume
             else:
                 self.__fill_volume = Utils.calculate_percent_from_value(self.__init_volume,

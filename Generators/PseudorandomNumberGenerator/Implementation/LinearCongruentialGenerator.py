@@ -1,5 +1,5 @@
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
-from Generators.PseudorandomNumberGenerator import PseudorandomNumberGenerator
+from Generators.PseudorandomNumberGenerator.PseudorandomNumberGenerator import PseudorandomNumberGenerator
 from Utils.Utils import Utils
 
 '''

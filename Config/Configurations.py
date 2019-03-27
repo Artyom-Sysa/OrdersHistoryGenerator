@@ -1,19 +1,19 @@
-from Decorators.Decorators import singleton
 import os
 
-from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import \
-    DefaultPythonLoggingService as Logger
-from Services.LoggerService.LoggerServiceImplementation.DefaultPythonLoggingService import LoggingLevel as Level
-
-from Utils.Utils import Utils
+from Decorators.Decorators import singleton
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
+from Utils.Utils import Utils
 
 
 @singleton
 class Configuration:
     def __init__(self):
-        Logger.add_to_journal(__file__, Level.INFO, 'Creating instance of Configuration class')
 
+
+        '''
+        self.setting - dictionary which filled with default values
+        After loading configurations, they will be filled in this dictionary
+        '''
         self.settings = {
             ValuesNames.GENERAL_SECTION_NAME: {
                 ValuesNames.ORDERS_AMOUNT: 2000,
@@ -31,9 +31,9 @@ class Configuration:
                                                                     'settings.ini')
             },
             ValuesNames.LOGGER_SECTION_NAME: {
-                ValuesNames.LOGGING_FOLDER_PATH: os.path.join(Utils.get_project_root_path(), 'Logs'),
-                ValuesNames.LOGGER_FORMAT: '%(levelname)s	%(asctime)s.%(msecs)d   %(name)s : %(message)s',
-                ValuesNames.LOGGER_DATE_FORMAT: '%d-%m-%Y %H:%M:%S',
+                ValuesNames.LOGGING_FOLDER_PATH: os.path.join(Utils.get_project_root_path(), 'Log'),
+                ValuesNames.LOGGER_FORMAT: '%%(levelname)s	%%(asctime)s.%%(msecs)d   %%(name)s : %%(message)s',
+                ValuesNames.LOGGER_DATE_FORMAT: '%%d-%%m-%%Y %%H:%%M:%%S',
                 ValuesNames.LOGGER_LEVEL: 'DEBUG'
             },
             ValuesNames.ID_GENERATOR: {

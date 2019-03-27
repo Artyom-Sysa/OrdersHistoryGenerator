@@ -1,0 +1,15 @@
+syntax="proto3";
+
+import 'GeneralOrderInformation.proto';
+import 'Status.proto';
+
+message OrderRecord{
+    GeneralOrderInformation general_order_information = 1;
+
+    message StatusInfo {
+        Status status = 2;
+        int64 timestamp_millis = 3;
+    }
+
+    repeated StatusInfo statuses_info = 2;
+}

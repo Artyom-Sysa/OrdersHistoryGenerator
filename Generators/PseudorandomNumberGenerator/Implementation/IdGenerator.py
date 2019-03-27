@@ -1,4 +1,4 @@
-from Generators.PseudorandomNumberGenerator import PseudorandomNumberGenerator
+from Generators.PseudorandomNumberGenerator.PseudorandomNumberGenerator import PseudorandomNumberGenerator
 from Utils.Utils import Utils
 
 '''

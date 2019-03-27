@@ -1,19 +1,22 @@
 import logging
+import os
 from enum import IntEnum
 from Utils.Utils import Utils
-from Services.LoggerService.LoggerService import LoggerService
+from Service.LoggerService.LoggerService import LoggerService
+from Config.Configurations import ValuesNames as Values
+from Config.Configurations import Configuration
 
 
-'''
-Enum of Logging levels
-Duplicate python in-build logging levels
-'''
 class LoggingLevel(IntEnum):
+    '''
+    Enum of Logging levels
+    Duplicate python in-build logging levels
+    '''
+
     CRITICAL = logging.CRITICAL
     FATAL = logging.FATAL
     ERROR = logging.ERROR
     WARN = logging.WARN
-    WARNING = logging.WARNING
     INFO = logging.INFO
     DEBUG = logging.DEBUG
     NOTSET = logging.NOTSET
@@ -85,10 +88,6 @@ class DefaultPythonLoggingService(LoggerService):
         cls.log(logger_file_path, LoggingLevel.WARN, message)
 
     @classmethod
-    def warning(cls, logger_file_path, message):
-        cls.log(logger_file_path, LoggingLevel.WARNING, message)
-
-    @classmethod
     def info(cls, logger_file_path, message):
         cls.log(logger_file_path, LoggingLevel.INFO, message)
 
@@ -99,3 +98,36 @@ class DefaultPythonLoggingService(LoggerService):
     @classmethod
     def notset(cls, logger_file_path, message):
         cls.log(logger_file_path, LoggingLevel.NOTSET, message)
+
+    @classmethod
+    def configurate_logger(cls):
+        '''
+        Configuration python in-build logger with config object parameters
+        '''
+
+        configs = Configuration()
+
+        cls.add_to_journal(__file__, LoggingLevel.INFO, 'Start execution function of configuration logger')
+
+        logging.basicConfig(
+            filename=os.path.join(configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGING_FOLDER_PATH],
+                                  Utils.get_current_date_with_format() + ".log"),
+            filemode='a',
+            format=configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_FORMAT].replace('%%', '%'),
+            datefmt=configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_DATE_FORMAT].replace('%%', '%'),
+            level=configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_LEVEL])
+
+        cls.add_to_journal(__file__, LoggingLevel.INFO, 'Execution function of configuration logger finished')
+        cls.debug(__file__,
+                     'Logger configurated with values: filename: {} | filemode: {} | format: {} | datefmt: {} | level: {}'.format(
+                         os.path.join(configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGING_FOLDER_PATH],
+                                      Utils.get_current_date_with_format() + ".log"),
+                         'a',
+                         configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_FORMAT].replace('%', '%%'),
+                         configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_DATE_FORMAT].replace('%',
+                                                                                                              '%%'),
+                         configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_LEVEL])
+                     )
+
+        Utils.create_folder_if_not_exists(configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGING_FOLDER_PATH])
+
