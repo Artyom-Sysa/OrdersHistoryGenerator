@@ -28,7 +28,7 @@ class Launcher:
 
     def __execute_generation_order_history(self):
         history_maker = OrderHistoryMaker()
-        history_maker.execute_prepare_configurations_for_generation()
+        history_maker.prepare_configurations_for_generation()
         history_maker.execute_generation()
 
 

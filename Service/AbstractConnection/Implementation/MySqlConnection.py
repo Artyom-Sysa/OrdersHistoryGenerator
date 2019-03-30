@@ -16,31 +16,12 @@ class MySqlConnection(AbstractConnection):
         self.__database = database
         self.__conn = None
 
-    def open(self, ):
-        if self.__user is None:
-            raise Exception("MySQL user parameter can't be None")
-
-        if self.__password is None:
-            raise Exception("MySQL password parameter can't be None")
-
-        if self.__host is None:
-            raise Exception("MySQL host parameter can't be None")
-
-        if self.__port is None:
-            raise Exception("MySQL host parameter can't be None")
-        else:
-            result, _ = Utils.is_number(self.__port)
-
-            if result == False:
-                raise Exception("MySQL port must be number")
-
-        if self.__database is None:
-            raise Exception("MySQL host parameter can't be None")
-
+    def open(self):
         try:
             self.__conn = mysql.connector.connect(user=self.__user,
                                                   password=self.__password,
                                                   host=self.__host,
+                                                  port=self.__port,
                                                   database=self.__database)
 
             Logger.debug('Created mysql connection with params {} {} {} {}'.format(self.__user,

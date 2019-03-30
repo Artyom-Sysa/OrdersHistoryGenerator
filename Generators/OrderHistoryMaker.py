@@ -40,7 +40,7 @@ class OrderHistoryMaker:
         Logger.info(__file__, 'Order history making started')
 
         self.__generate_green_orders()
-        #self.__generate_red_blue_orders()
+        self.__generate_red_blue_orders()
 
         Logger.info(__file__, 'Order history making finished')
 
@@ -324,7 +324,7 @@ class OrderHistoryMaker:
                     'Calculating start date of first period for generation orders finished. Start at {}'.format(
                         self.configs.start_date))
 
-    def execute_prepare_configurations_for_generation(self):
+    def prepare_configurations_for_generation(self):
         '''
         Call all function for prepare to generation ordera
         '''

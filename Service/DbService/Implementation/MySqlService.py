@@ -17,13 +17,10 @@ class MySqlService(DbService):
             cursor = self.__connection.get_cursor()
 
             if cursor is not None:
-                try:
-                    cursor.execute(query)
-                except mysql.connector.Error as err:
-                    Logger.error(__file__, err.msg)
+                cursor.execute(query)
 
                 self.__connection.commit()
-
+                self.__connection.close()
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
 
@@ -34,15 +31,11 @@ class MySqlService(DbService):
             cursor = self.__connection.get_cursor()
 
             if cursor is not None:
-
                 for query in queries:
-                    try:
-                        cursor.execute(query)
-                    except mysql.connector.Error as err:
-                        Logger.error(__file__, err.msg)
+                    cursor.execute(query)
 
                 self.__connection.commit()
-
+                self.__connection.close()
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
 
@@ -53,12 +46,10 @@ class MySqlService(DbService):
             cursor = self.__connection.get_cursor()
 
             if cursor is not None:
-                try:
-                    cursor.executemany(query, params)
-                except mysql.connector.Error as err:
-                    Logger.error(__file__, err.msg)
+                cursor.executemany(query, params)
 
                 self.__connection.commit()
+                self.__connection.close()
 
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)

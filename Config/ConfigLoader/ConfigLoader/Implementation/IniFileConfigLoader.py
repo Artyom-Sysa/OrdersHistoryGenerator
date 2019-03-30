@@ -9,7 +9,6 @@ from Utils.Utils import Utils
 
 
 class IniFileConfigLoader(ConfigLoader):
-
     def __init__(self):
         self.configuration = Configuration()
 
