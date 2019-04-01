@@ -1,17 +1,17 @@
 import datetime
 import time
 
-import Entities.OrderRecord_pb2 as OrderRecords
-import Entities.StatusSequence_pb2 as StatusSequence
-import Entities.Status_pb2 as Status
 from Config.Configurations import Configuration
 from Config.Configurations import ValuesNames as Values
+from Entities.GeneralOrderInformation import GeneralOrderInformation
+from Entities.OrderStatusChangingInfo import OrderStatusChangingInfo
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
-
+from Enums.Status import Status
+from Enums.StatusSequence import StatusSequence
+from Enums.Zone import Zone
 from Generators.PseudorandomNumberGenerator.Implementation.LinearCongruentialGenerator import \
     LinearCongruentialGenerator as LCG
-from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
-    DefaultPythonLoggingService as Logger
+from Service.LoggerService.Implementation.DefaultPythonLoggingService import DefaultPythonLoggingService  as Logger
 from Utils.Utils import Utils
 
 
@@ -20,16 +20,18 @@ class OrderRecordsBuilder:
         self.__order_general_information = None
         self.__configs = Configuration()
 
+
         Logger.debug(__file__, 'Init OrderRecordsBuilder instance')
 
     def set_general_order_info(self, general_order_info):
-        self.__order_general_information = general_order_info
+        if isinstance(general_order_info, GeneralOrderInformation):
+            self.__order_general_information = general_order_info
 
-        Logger.debug(__file__,
-                     'Set general order info parameter to {}'.format(self.__order_general_information.__str__()))
+            Logger.debug(__file__,
+                         'Set general order info parameter to {}'.format(self.__order_general_information.__str__()))
         return self
 
-    def build_order_with_records_in_green_zone(self, period_index):
+    def build_order_records_in_green_zone(self, id, status_sequence, period_index):
         Logger.debug(__file__, 'Called building order in green zone')
 
         period_start = self.__configs.start_date + datetime.timedelta(days=period_index * 7)
@@ -52,30 +54,22 @@ class OrderRecordsBuilder:
                      f'Generated times for records: {first_status_time}, {second_status_time}, {third_status_time}')
 
         Logger.debug(__file__, 'Building order records in green zone finished')
+        return [
+            OrderStatusChangingInfo(id, self.__generate_ms_datetime(first_status_date, first_status_time), Status.NEW,
+                                    Zone.GREEN),
+            OrderStatusChangingInfo(id, self.__generate_ms_datetime(second_status_date, second_status_time),
+                                    Status.TO_PROVIDER, Zone.GREEN),
+            OrderStatusChangingInfo(id, self.__generate_ms_datetime(third_status_date, third_status_time),
+                                    self.__get_last_status(status_sequence),
+                                    Zone.GREEN)
+        ]
 
-        o = OrderRecords.OrderRecord()
-        self.__set_general_info(o)
-
-        record = o.statuses_info.add()
-        record.status = Status.STATUS_NEW
-        record.timestamp_millis = self.__generate_ms_datetime(first_status_date, first_status_time)
-
-        record = o.statuses_info.add()
-        record.status = Status.STATUS_TO_PROVIDER
-        record.timestamp_millis = self.__generate_ms_datetime(second_status_date, second_status_time)
-
-        record = o.statuses_info.add()
-        record.status = self.__get_last_status(self.__order_general_information.status_sequence)
-        record.timestamp_millis = self.__generate_ms_datetime(third_status_date, third_status_time)
-
-        return o
-
-    def build_order_with_records_in_blue_red_zone(self, period_start, period_end):
+    def build_order_records_in_blue_red_zone(self, id, status_sequence, statuses_in_blue_zone_, period_start,
+                                             period_end):
         Logger.debug(__file__, 'Called building order in blue-red zone')
 
         first_status_date, second_status_date, third_status_date = \
-            self.__calculate_red_blue_zone_order_dates(
-                period_start, period_end)
+            self.__calculate_red_blue_zone_order_dates(statuses_in_blue_zone_, period_start, period_end)
 
         Logger.debug(__file__,
                      f'Generated dates for records: {first_status_date}, {second_status_date}, {third_status_date}')
@@ -88,27 +82,34 @@ class OrderRecordsBuilder:
         Logger.debug(__file__,
                      f'Generated times for records: {first_status_time}, {second_status_time}, {third_status_time}')
 
-        o = OrderRecords.OrderRecord()
-        self.__set_general_info(o)
+        records = []
 
         if first_status_date != 0:
-            record = o.statuses_info.add()
-            record.status = Status.STATUS_NEW
-            record.timestamp_millis = self.__generate_ms_datetime(first_status_date, first_status_time)
+            records.append(
+                OrderStatusChangingInfo(id,
+                                        self.__generate_ms_datetime(first_status_date, first_status_time),
+                                        Status.NEW, Zone.BLUE)
+            )
 
         if second_status_date != 0:
-            record = o.statuses_info.add()
-            record.status = Status.STATUS_TO_PROVIDER
-            record.timestamp_millis = self.__generate_ms_datetime(second_status_date, second_status_time)
+            records.append(
+                OrderStatusChangingInfo(id,
+                                        self.__generate_ms_datetime(second_status_date, second_status_time),
+                                        Status.TO_PROVIDER,
+                                        Zone.BLUE if statuses_in_blue_zone_ == 2 else Zone.RED)
+            )
 
         if third_status_date != 0:
-            record = o.statuses_info.add()
-            record.status = self.__get_last_status(self.__order_general_information.status_sequence)
-            record.timestamp_millis = self.__generate_ms_datetime(third_status_date, third_status_time)
+            records.append(
+                OrderStatusChangingInfo(id,
+                                        self.__generate_ms_datetime(third_status_date, third_status_time),
+                                        self.__get_last_status(status_sequence),
+                                        Zone.RED)
+            )
 
         Logger.debug(__file__, 'Building order records in blue-red zone finished')
 
-        return o
+        return records
 
     def __calculate_date(self, offset, previous_date):
         previous_date_day_of_week = previous_date.weekday() + 1
@@ -182,17 +183,16 @@ class OrderRecordsBuilder:
         return int(time.mktime(date.timetuple()) * 1000 + ms_time)
 
     def __get_last_status(self, status_sequence):
+        if status_sequence == StatusSequence.FILLED:
+            return Status.FILLED
 
-        if status_sequence == 0:  # StatusSequence.FILLED:
-            return Status.STATUS_FILLED
+        if status_sequence == StatusSequence.PARTIAL_FILLED:
+            return Status.PARTIAL_FILLED
 
-        if status_sequence == 1:  # StatusSequence.PARTIAL_FILLED:
-            return Status.STATUS_PARTIAL_FILLED
+        if status_sequence == StatusSequence.REJECTED:
+            return Status.REJECTED
 
-        if status_sequence == 2:  # StatusSequence.REJECTED:
-            return Status.STATUS_REJECTED
-
-    def __calculate_red_blue_zone_order_dates(self, period_start, period_end):
+    def __calculate_red_blue_zone_order_dates(self, statuses_in_blue_zone, period_start, period_end):
         start_period_date = self.__configs.start_date + datetime.timedelta(
             days=(7 * (period_start + 1)) if period_start != -1 else 0)
 
@@ -205,13 +205,13 @@ class OrderRecordsBuilder:
         second_status_date = 0
         third_status_date = 0
 
-        if self.__order_general_information.statuses_in_blue_zone == 2:
+        if statuses_in_blue_zone == 2:
             second_status_date = self.__calculate_date(second_status_day_offset, first_status_date)
         else:
             if start_finish_period != -1:
                 second_status_date = self.__calculate_date(second_status_day_offset, start_finish_period)
 
-        if self.__order_general_information.statuses_in_blue_zone == 2:
+        if statuses_in_blue_zone == 2:
             if start_finish_period != -1:
                 third_status_date = self.__calculate_date(third_status_day_offset, start_finish_period)
         else:
@@ -219,17 +219,3 @@ class OrderRecordsBuilder:
                 third_status_date = self.__calculate_date(third_status_day_offset, second_status_date)
 
         return first_status_date, second_status_date, third_status_date
-
-    def __set_general_info(self, record):
-        record.general_order_information.id = self.__order_general_information.id
-        record.general_order_information.direction = self.__order_general_information.direction
-        record.general_order_information.status_sequence = self.__order_general_information.status_sequence
-        record.general_order_information.currency_pair_name = self.__order_general_information.currency_pair_name
-        record.general_order_information.currency_pair_value = self.__order_general_information.currency_pair_value
-        record.general_order_information.init_currency_pair_value = self.__order_general_information.init_currency_pair_value
-        record.general_order_information.init_volume = self.__order_general_information.init_volume
-        record.general_order_information.fill_currency_pair_value = self.__order_general_information.fill_currency_pair_value
-        record.general_order_information.fill_volume = int(self.__order_general_information.fill_volume)
-        record.general_order_information.statuses_in_blue_zone = self.__order_general_information.statuses_in_blue_zone
-        record.general_order_information.tags = self.__order_general_information.tags
-        record.general_order_information.description = self.__order_general_information.description

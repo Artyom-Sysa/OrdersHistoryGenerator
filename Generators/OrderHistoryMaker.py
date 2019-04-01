@@ -3,6 +3,7 @@ import re
 
 from Config.Configurations import Configuration
 from Config.Configurations import ValuesNames as Values
+from Entities.OrderHistory import OrderHistory
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 from Generators.GeneralOrderInformationBuilder import GeneralOrderInformationBuilder
 from Generators.OrderRecordsBuilder import OrderRecordsBuilder
@@ -12,6 +13,20 @@ from Generators.PseudorandomNumberGenerator.Implementation.LinearCongruentialGen
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
     DefaultPythonLoggingService as Logger
 from Utils.Utils import Utils
+from Enums.Zone import Zone
+from Entities.StatisticsDataStorage import StatisticsDataStorage
+
+from Service.FileService.Implementation.CsvFileService import CsvFileService
+from Enums.Status import Status
+from Service.MessageBrokerService.Implementation.RmqService import RmqService
+from Enums.ExchangeType import ExchangeType
+import Entities.Protobuf.OrderInformation_pb2 as OrderInformation
+import Entities.Protobuf.Direction_pb2
+import pprint
+from Enums.Direction import Direction
+import Entities.Protobuf.Direction_pb2
+import Entities.Protobuf.Status_pb2
+from Service.DbService.Implementation.MySqlService import MySqlService
 
 
 class OrderHistoryMaker:
@@ -19,6 +34,11 @@ class OrderHistoryMaker:
         self.configs = Configuration()
         self.records_builder = OrderRecordsBuilder()
         self.order_builder = GeneralOrderInformationBuilder()
+        self.history = OrderHistory()
+
+        self.readed_green_records = None
+        self.readed_red_records = None
+        self.readed_blue_records = None
 
     def __count_volume_by_color(self, color):
         '''
@@ -37,25 +57,23 @@ class OrderHistoryMaker:
         Execute generation orders history
         '''
 
+        self.history.clear_history()
+
         Logger.info(__file__, 'Order history making started')
 
         self.__generate_green_orders()
         self.__generate_red_blue_orders()
 
-        Logger.info(__file__, 'Order history making finished')
-
-    def __get_order_in_green_zone(self, period):
+    def __get_order_in_green_zone(self, id, status_sequence, period):
         '''
         Generate GeneralOrderHistory for green zone
         :param period: period index for generation
         :return: GeneralOrderHistory instance for green zone period
         '''
 
-        return self.records_builder.set_general_order_info(
-            self.__generate_general_order_information()
-        ).build_order_with_records_in_green_zone(period)
+        return self.records_builder.build_order_records_in_green_zone(id, status_sequence, period)
 
-    def __get_order_in_blue_red_zone(self, period_start, period_end):
+    def __get_order_in_blue_red_zone(self, id, status_sequence, statuses_in_blue_zone_, period_start, period_end):
         '''
         Generate GeneralOrderHistory for blue-red zone
         :param period_start: index of start order period
@@ -63,9 +81,8 @@ class OrderHistoryMaker:
         :return: GeneralOrderHistory instance for blue-red zone period
         '''
 
-        return self.records_builder.set_general_order_info(
-            self.__generate_general_order_information()
-        ).build_order_with_records_in_blue_red_zone(period_start, period_end)
+        return self.records_builder.build_order_records_in_blue_red_zone(id, status_sequence, statuses_in_blue_zone_,
+                                                                         period_start, period_end)
 
     def __generate_general_order_information(self):
         '''
@@ -102,6 +119,8 @@ class OrderHistoryMaker:
         period_limit = self.configs.orders_volumes_for_generation[period][Values.GREEN_ZONE_VOLUME]
         period_counter = 0
 
+        previous_time = datetime.datetime.now()
+
         for i in range(total_green_volume + 1):
             Logger.debug(__file__, f'Generation {i + 1} green order history started')
 
@@ -112,10 +131,16 @@ class OrderHistoryMaker:
                 period += 1
                 period_limit = self.configs.orders_volumes_for_generation[period - 1][Values.GREEN_ZONE_VOLUME]
 
-            # do something with:
-            # self.__get_order_in_green_zone(period).SerializeToString()
+            order = self.__generate_general_order_information()
+            self.history.orders[order.id] = order
+            self.history.green_records.extend(self.__get_order_in_green_zone(order.id, order.status_sequence, period))
 
-            Logger.info(__file__, f'Generation {i + 1} green order history finished')
+            if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
+                self.__add_time_statistic('Order history generation',
+                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                previous_time = datetime.datetime.now()
+
+            Logger.debug(__file__, f'Generation {i + 1} green order history finished')
         Logger.info(__file__, 'Generation green zone orders history finished')
 
     def __generate_red_blue_orders(self):
@@ -137,21 +162,40 @@ class OrderHistoryMaker:
 
         total_green_volume = int(self.__count_volume_by_color(Values.GREEN_ZONE_VOLUME)) - 1
 
+        previous_time = datetime.datetime.now()
+
         for i in range(total_green_volume + 1, total_orders_amount):
             Logger.debug(__file__, f'Started generation {i - total_green_volume} order history in blue-red zone')
 
-            # do something with:
-            # self.__get_order_in_blue_red_zone(period_start, period_finish).SerializeToString()
+            order = self.__generate_general_order_information()
+            self.history.orders[order.id] = order
 
-            Logger.info(__file__, f'Generation {i - total_green_volume} order history in blue-red zone finished')
+            for record in self.__get_order_in_blue_red_zone(order.id,
+                                                            order.status_sequence,
+                                                            order.statuses_in_blue_zone,
+                                                            period_start,
+                                                            period_finish):
+                if record.zone == Zone.RED:
+                    self.history.red_records.append(record)
+                if record.zone == Zone.BLUE:
+                    self.history.blue_records.append(record)
+                if record.zone == Zone.GREEN:
+                    self.history.green_records.append(record)
+
+            if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
+                self.__add_time_statistic('Order history generation',
+                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                previous_time = datetime.datetime.now()
+
+            Logger.debug(__file__, f'Generation {i - total_green_volume} order history in blue-red zone finished')
 
             if period_start_counter < period_start_limit:
                 period_start_counter += 1
             else:
                 period_start += 1
                 period_start_limit = self.configs.orders_volumes_for_generation[period_start][Values.BLUE_ZONE_VOLUME] \
-                    if period_start < len(
-                    self.configs.orders_volumes_for_generation) else self.configs.not_used_orders_amount
+                    if period_start < len(self.configs.orders_volumes_for_generation) \
+                    else self.configs.not_used_orders_amount
 
                 if period_start == len(self.configs.orders_volumes_for_generation):
                     period_start = 0
@@ -172,6 +216,10 @@ class OrderHistoryMaker:
                 period_finish = -1
 
         Logger.info(__file__, 'Generation blue-red zone orders history finished')
+
+        if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] != 0:
+            self.__add_time_statistic('Order history generation',
+                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)
 
     def __load_currency_pairs_from_file(self):
         '''
@@ -287,9 +335,10 @@ class OrderHistoryMaker:
 
                 if not_used > 0 and needed_orders <= not_used and volume[Values.RED_ZONE_VOLUME] <= in_blue_zone:
                     in_blue_zone = in_blue_zone - volume[Values.RED_ZONE_VOLUME] + volume[Values.BLUE_ZONE_VOLUME]
-                    self.configs.orders_volumes_for_generation.append(volume)
-                    not_used -= needed_orders
 
+                    self.configs.orders_volumes_for_generation.append(volume)
+
+                    not_used -= needed_orders
                     found_volume = True
                 else:
                     i -= 1
@@ -364,3 +413,204 @@ class OrderHistoryMaker:
             if 'GENERATOR' in section:
                 LCG.set_linear_congruential_generator(section, self.configs.settings[section])
 
+    def write_to_file(self):
+        '''
+        Writing orders records history to file
+        '''
+
+        path = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDER_HISTORY_WRITE_FILE_PATH]
+        Utils.remove_file_if_exists(path)
+
+        file_service = CsvFileService(path)
+
+        self.__write_list(file_service, self.history.green_records, 'Green records writing to file')
+        self.__write_list(file_service, self.history.red_records, 'Red records writing to file')
+        self.__write_list(file_service, self.history.blue_records, 'Blue records writing to file')
+
+        file_service.close()
+
+    def clear_history(self):
+        self.history.clear_history()
+
+    def __write_list(self, file_service, list, name_stat):
+
+        previous_time = datetime.datetime.now()
+        counter = 0
+        data = []
+
+        for record in list:
+            order = self.history.orders[record.order_id].to_list()
+
+            data.append([
+                order[Values.ID],
+                order[Values.DIRECTION],
+                order[Values.CURRENCY_PAIR_NAME],
+                order[Values.INIT_PX],
+                order[Values.INIT_VOLUME],
+                order[Values.FILL_PX] if record.status in [Status.FILLED, Status.PARTIAL_FILLED] else 0,
+                order[Values.FILL_VOLUME] if record.status in [Status.FILLED, Status.PARTIAL_FILLED] else 0,
+                record.timestamp_millis,
+                record.status.value,
+                order[Values.TAGS],
+                order[Values.DESCRIPTIONS],
+                record.zone.value
+            ])
+
+            counter += 1
+            if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
+                file_service.write(data, 'a')
+                self.__add_time_statistic(name_stat,
+                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                data = []
+                previous_time = datetime.datetime.now()
+
+        if len(data) > 0:
+            file_service.write(data, 'a')
+            self.__add_time_statistic(name_stat,
+                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+
+    def read_from_file(self):
+        file_service = CsvFileService(
+            self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDER_HISTORY_WRITE_FILE_PATH])
+
+        start = datetime.datetime.now()
+
+        for row in file_service.read():
+            self.__add_row_to_list(row)
+
+        self.__add_time_statistic('Read and sort records by zones',
+                                  (datetime.datetime.now() - start).total_seconds() * 1000)
+
+    @staticmethod
+    def __add_time_statistic(name, value):
+        if name not in StatisticsDataStorage.statistics:
+            StatisticsDataStorage.statistics[name] = []
+        StatisticsDataStorage.statistics[name].append(value)
+
+    def __add_row_to_list(self, row):
+        zone = row[11]
+        if Zone.GREEN.value == zone:
+            if self.readed_green_records is None:
+                self.readed_green_records = []
+            self.readed_green_records.append(row)
+        if Zone.BLUE.value == zone:
+            if self.readed_blue_records is None:
+                self.readed_blue_records = []
+            self.readed_blue_records.append(row)
+        if Zone.RED.value == zone:
+            if self.readed_red_records is None:
+                self.readed_red_records = []
+            self.readed_red_records.append(row)
+
+    def send_readed_records_to_rmq(self):
+        rmq_settings = self.configs.settings[Values.RMQ_SECTION_NAME]
+
+        rmq = RmqService()
+        rmq.open_connection(host=rmq_settings[Values.RMQ_HOST], port=rmq_settings[Values.RMQ_PORT],
+                            virtual_host=rmq_settings[Values.RMQ_VIRTUAL_HOST], user=rmq_settings[Values.RMQ_USER],
+                            password=rmq_settings[Values.RMQ_PASSWORD])
+
+        rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
+
+        rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME], exchange_type=ExchangeType.TOPIC)
+
+        rmq.declare_queue(queue_name=Zone.RED.value)
+        rmq.declare_queue(queue_name=Zone.BLUE.value)
+        rmq.declare_queue(queue_name=Zone.GREEN.value)
+
+        rmq.queue_bind(Zone.RED.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                       rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY])
+        rmq.queue_bind(Zone.BLUE.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                       rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY])
+        rmq.queue_bind(Zone.GREEN.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                       rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY])
+
+        self.__send_list_to_rmq(rmq, self.readed_red_records, rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY],
+                                'Send RabbitMQ red zone records')
+        self.__send_list_to_rmq(rmq, self.readed_blue_records,
+                                rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY],
+                                'Send RabbitMQ blue zone records')
+        self.__send_list_to_rmq(rmq, self.readed_green_records,
+                                rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY],
+                                'Send RabbitMQ green zone records')
+
+    def send_readed_records_to_mysql(self):
+        mysql_settings = self.configs.settings[Values.MYSQL_SECTION_NAME]
+
+        mysql = MySqlService(user=mysql_settings[Values.MYSQL_USER], password=mysql_settings[Values.MYSQL_PASSWORD],
+                             host=mysql_settings[Values.MYSQL_HOST], port=mysql_settings[Values.MYSQL_PORT],
+                             database=mysql_settings[Values.MYSQL_DB_NAME])
+
+        self.__send_list_to_mysql(mysql, self.readed_red_records, 'Send red zones records to MySql')
+        self.__send_list_to_mysql(mysql, self.readed_blue_records, 'Send blue zones records to MySql')
+        self.__send_list_to_mysql(mysql, self.readed_green_records, 'Send green zones records to MySql')
+
+
+    def __send_list_to_mysql(self, mysql, list, name_stat):
+        previous_time = datetime.datetime.now()
+        counter = 0
+
+        data = []
+
+        for record in list:
+            data.append((record[0], record[1], record[2], record[3], record[4], record[5], record[6], record[7],
+                         record[8], record[9], record[10], record[11]))
+
+            counter += 1
+            if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
+                mysql.execute_multiple(Values.MYSQL_INSERT_QUERY, data)
+                data.clear()
+                self.__add_time_statistic(name_stat,
+                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                previous_time = datetime.datetime.now()
+
+        if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] != 0:
+            mysql.execute_multiple(Values.MYSQL_INSERT_QUERY, data)
+            data.clear()
+            self.__add_time_statistic(name_stat,
+                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+
+    def __order_record_to_proto(self, order):
+        result = OrderInformation.OrderInformation()
+        result.id = int(order[0])
+        result.direction = Entities.Protobuf.Direction_pb2.BUY \
+            if order[1] == Direction.BUY.value else Entities.Protobuf.Direction_pb2.SELL
+        result.currency_pair_name = order[2]
+        result.init_currency_pair_value = float(order[3])
+        result.init_volume = int(order[4])
+        result.fill_currency_pair_value = float(order[5])
+        result.fill_volume = int(order[6])
+        result.timestamp_millis = int(order[7])
+
+        if order[8] == Status.NEW.value:
+            result.status = Entities.Protobuf.Status_pb2.STATUS_NEW
+        if order[8] == Status.TO_PROVIDER.value:
+            result.status = Entities.Protobuf.Status_pb2.STATUS_TO_PROVIDER
+        if order[8] == Status.PARTIAL_FILLED.value:
+            result.status = Entities.Protobuf.Status_pb2.STATUS_PARTIAL_FILLED
+        if order[8] == Status.REJECTED.value:
+            result.status = Entities.Protobuf.Status_pb2.STATUS_REJECTED
+        if order[8] == Status.FILLED.value:
+            result.status = Entities.Protobuf.Status_pb2.STATUS_FILLED
+
+        result.tags = order[9]
+        result.description = order[10]
+
+        return result
+
+    def __send_list_to_rmq(self, rmq, list, key, name_stat):
+        previous_time = datetime.datetime.now()
+        counter = 0
+
+        for record in list:
+            rmq.publish(self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_NAME], key,
+                        self.__order_record_to_proto(record).SerializeToString())
+            counter += 1
+            if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
+                self.__add_time_statistic(name_stat,
+                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                previous_time = datetime.datetime.now()
+
+        if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] != 0:
+            self.__add_time_statistic(name_stat,
+                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)

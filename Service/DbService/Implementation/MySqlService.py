@@ -8,7 +8,7 @@ from Service.DbService.DbService import DbService
 class MySqlService(DbService):
     def __init__(self, user='root', password='', host='127.0.0.1', port='3306', database=''):
         self.__connection = MySqlConnection(user=user, password=password, host=host, port=port, database=database)
-        Logger.debug('Created mysql service')
+        Logger.debug(__file__, 'Created mysql service')
 
     def execute(self, query, *args, **kwargs):
         try:
@@ -23,6 +23,8 @@ class MySqlService(DbService):
                 self.__connection.close()
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
+            print(err.msg)
+
 
     def execute_many(self, queries):
         try:
@@ -38,6 +40,8 @@ class MySqlService(DbService):
                 self.__connection.close()
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
+            print(err.msg)
+
 
     def execute_multiple(self, query, params):
         try:
@@ -53,3 +57,4 @@ class MySqlService(DbService):
 
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
+            print(err.msg)

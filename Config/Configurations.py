@@ -8,8 +8,6 @@ from Utils.Utils import Utils
 @singleton
 class Configuration:
     def __init__(self):
-
-
         '''
         self.setting - dictionary which filled with default values
         After loading configurations, they will be filled in this dictionary
@@ -21,6 +19,7 @@ class Configuration:
                 ValuesNames.RED_ZONE_ORDERS_PERCENT: 15,
                 ValuesNames.GREEN_ZONE_ORDERS_PERCENT: 60,
                 ValuesNames.BLUE_ZONE_ORDERS_PERCENT: 25,
+                ValuesNames.BATCH_SIZE: 100,
                 ValuesNames.CURRENCY_DEVIATION_PERCENT: 5,
                 ValuesNames.ORDER_HISTORY_WRITE_FILE_PATH: os.path.join(Utils.get_project_root_path(), 'Resources',
                                                                         'Result.csv'),
@@ -35,6 +34,24 @@ class Configuration:
                 ValuesNames.LOGGER_FORMAT: '%%(levelname)s	%%(asctime)s.%%(msecs)d   %%(name)s : %%(message)s',
                 ValuesNames.LOGGER_DATE_FORMAT: '%%d-%%m-%%Y %%H:%%M:%%S',
                 ValuesNames.LOGGER_LEVEL: 'DEBUG'
+            },
+            ValuesNames.MYSQL_SECTION_NAME: {
+                ValuesNames.MYSQL_HOST: '127.0.0.1',
+                ValuesNames.MYSQL_PORT: '3306',
+                ValuesNames.MYSQL_USER: 'root',
+                ValuesNames.MYSQL_PASSWORD: '',
+                ValuesNames.MYSQL_DB_NAME: 'OrdersHistory'
+            },
+            ValuesNames.RMQ_SECTION_NAME: {
+                ValuesNames.RMQ_HOST: '127.0.0.1',
+                ValuesNames.RMQ_PORT: 5672,
+                ValuesNames.RMQ_VIRTUAL_HOST: '/',
+                ValuesNames.RMQ_USER: 'guest',
+                ValuesNames.RMQ_PASSWORD: 'guest',
+                ValuesNames.RMQ_EXCHANGE_NAME: 'orders_records',
+                ValuesNames.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY: 'r.order.red-zone.order-history-generator',
+                ValuesNames.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY: 'r.order.blue-zone.order-history-generator',
+                ValuesNames.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY: 'r.order.green-zone.order-history-generator',
             },
             ValuesNames.ID_GENERATOR: {
                 ValuesNames.MWC1616_X: 23,
@@ -178,7 +195,7 @@ class ValuesNames:
     LOGGER_DATE_FORMAT = 'logger_date_format'
     LOGGER_LEVEL = 'logger_level'
     ORDER_HISTORY_WRITE_FILE_PATH = 'order_history_write_file_path'
-    CURRENCY_PAIRS_FILE_PATH = 'order_history_write_file_path'
+    CURRENCY_PAIRS_FILE_PATH = 'currency_pairs_file_path'
     TAGS_FILE_PATH = 'tags_file_path'
     DEFAULT_SETTING_FILE_PATH = 'default_setting_file_path'
 
@@ -245,7 +262,39 @@ class ValuesNames:
     CURRENCY_PAIR_NAME = "currency pair name"
     CURRENCY_PAIR_VALUE = "currency pair value"
 
+    ID = 'id'
+    DIRECTION = "direction"
+    INIT_PX = "init px"
+    INIT_VOLUME = "init volume"
+    FILL_PX = "fill px"
+    FILL_VOLUME = "fill volume"
+    TAGS = "tags"
+    DESCRIPTIONS = "decriptions"
+
     TOTAL_ORDERS_VOLUME = 'ORDER_TOTAL_VOLUME'
     RED_ZONE_VOLUME = 'RED_ZONE_VOLUME'
     BLUE_ZONE_VOLUME = 'BLUE_ZONE_VOLUME'
     GREEN_ZONE_VOLUME = 'GREEN_ZONE_VOLUME'
+
+    BATCH_SIZE = 'batch_size'
+
+    RMQ_SECTION_NAME = 'RABBITMQ'
+
+    RMQ_HOST = 'rabbitmq_host'
+    RMQ_PORT = 'rabbitmq_port'
+    RMQ_VIRTUAL_HOST = 'rabbitmq_virtual_host'
+    RMQ_USER = 'rabbitmq_user'
+    RMQ_PASSWORD = 'rabbitmq_password'
+    RMQ_EXCHANGE_NAME = 'rabbitmq_exchange_name'
+    RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY = 'rabbitmq_red_records_routing_key'
+    RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY = 'rabbitmq_blue_records_routing_key'
+    RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY = 'rabbitmq_gree_records_routing_key'
+
+    MYSQL_INSERT_QUERY = 'INSERT INTO `OrdersHistory`.`History`(`id`,`direction`,`currency_pair`,`init_px`,`fill_px`,`init_vol`,`fill_vol`,`status`,`datetime`,`tags`,`description`, `zone`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
+
+    MYSQL_SECTION_NAME = 'MYSQL'
+    MYSQL_HOST = 'mysql_host'
+    MYSQL_PORT = 'mysql_port'
+    MYSQL_USER = 'mysql_user'
+    MYSQL_PASSWORD = 'mysql_password'
+    MYSQL_DB_NAME = 'mysql_db_name'

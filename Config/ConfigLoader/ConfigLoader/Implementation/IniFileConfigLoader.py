@@ -97,7 +97,7 @@ class IniFileConfigLoader(ConfigLoader):
 
             for section in cfg_parser.sections():
                 Logger.add_to_journal(__file__,
-                                      Level.INFO,
+                                      Level.DEBUG,
                                       'Writing {} section to configuration object'.format(section))
 
                 for key in cfg_parser[section]:

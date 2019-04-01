@@ -1,5 +1,6 @@
 .idea/
 .Logs/
+.Resources/Result.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

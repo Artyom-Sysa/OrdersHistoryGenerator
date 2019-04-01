@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-enum StatusSequence {
-    FILLED = 0;
-    PARTIAL_FILLED = 1;
-    REJECTED = 2;
-}

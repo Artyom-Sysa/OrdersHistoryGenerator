@@ -24,10 +24,10 @@ class MySqlConnection(AbstractConnection):
                                                   port=self.__port,
                                                   database=self.__database)
 
-            Logger.debug('Created mysql connection with params {} {} {} {}'.format(self.__user,
-                                                                                   self.__password,
-                                                                                   self.__host,
-                                                                                   self.__database))
+            Logger.debug(__file__, 'Created mysql connection with params {} {} {} {}'.format(self.__user,
+                                                                                             self.__password,
+                                                                                             self.__host,
+                                                                                             self.__database))
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
 

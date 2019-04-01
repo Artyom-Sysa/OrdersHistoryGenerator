@@ -168,3 +168,10 @@ class Utils:
         else:
             return 2
 
+    @staticmethod
+    def remove_file_if_exists(path):
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except:
+            pass

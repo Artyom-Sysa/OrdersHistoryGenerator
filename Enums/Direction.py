@@ -2,5 +2,5 @@ from enum import Enum
 
 
 class Direction(Enum):
-    BUY = 'BUY'
-    SELL = 'SELL'
+    BUY = 'Buy'
+    SELL = 'Sell'
