@@ -78,7 +78,7 @@ CREATE TABLE `History` (
   `zone` varchar(5) NOT NULL,
   PRIMARY KEY (`pk_id`),
   UNIQUE KEY `id_UNIQUE` (`pk_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5694 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
 
 ```
@@ -98,7 +98,6 @@ Required settings:
 ```
 # Default settings
 # Change parameters to your system confgurations
-#
 
 [GENERAL]
 orders_amount = 2000
