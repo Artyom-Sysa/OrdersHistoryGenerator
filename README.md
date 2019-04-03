@@ -46,7 +46,7 @@ If `pip` don't install on you PC install by this instructions:
 
 Install additional modules
 ```bash
-$ pip install -r /path/to/project/folder/requirements.txt 
+$ pip install -r ./requirements.txt 
 ```
 
 #### MySQL:
