@@ -9,6 +9,8 @@ from Service.LoggerService.Implementation.DefaultPythonLoggingService import Log
 from Reporter.Implementation.ConsoleReporter import ConsoleReporter
 from Entities.StatisticsDataStorage import StatisticsDataStorage
 
+from Enums.ExchangeType import ExchangeType
+
 
 class Launcher:
     def start(self):
@@ -31,18 +33,20 @@ class Launcher:
     def __execute(self):
         history_maker = OrderHistoryMaker()
         history_maker.prepare_configurations_for_generation()
-        print('Generating orders records history...')
+        #print('Generating orders records history...')
         history_maker.execute_generation()
-        print('Writing records to file...')
+        #print('Writing records to file...')
         history_maker.write_to_file()
-        print('Reading records from file...')
+        #print('Reading records from file...')
         history_maker.read_from_file()
-        print('Sending records to RabbitMQ...')
+        #print('Sending records to RabbitMQ...')
         history_maker.send_readed_records_to_rmq()
-        print('Sending records to MySQL...')
+        #print('Sending records to MySQL...')
         history_maker.send_readed_records_to_mysql()
 
         ConsoleReporter.report(StatisticsDataStorage.statistics)
+
+        Logger.info(__file__, 'Order history generation finished')
 
 
 if __name__ == '__main__':

@@ -18,7 +18,6 @@ class CsvFileService(FileService):
         return self.__file_descriptor.read()
 
     def write(self, data, mode, *args, **kwargs):
-        Logger.debug(__file__, 'Closing csv file service')
         if self.__file_descriptor.mode != mode:
             self.__file_descriptor.close()
             self.__file_descriptor.open(path=self.path, mode=mode)
@@ -28,3 +27,7 @@ class CsvFileService(FileService):
     def close(self):
         Logger.debug(__file__, 'Closing csv file service')
         self.__file_descriptor.close()
+
+    def open_descriptor(self, mode):
+        if self.__file_descriptor.mode != mode:
+            self.__file_descriptor.open(path=self.path, mode=mode)

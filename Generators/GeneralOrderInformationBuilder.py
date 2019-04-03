@@ -85,7 +85,7 @@ class GeneralOrderInformationBuilder:
                 self.__fill_volume = self.__init_volume
             else:
                 self.__fill_volume = int(Utils.calculate_percent_from_value(self.__init_volume,
-                                                                        self.__fill_volume_deviation_percent))
+                                                                            self.__fill_volume_deviation_percent))
         return self
 
     def set_currency_pair_fill_value_by_deviation_percent(self, value):

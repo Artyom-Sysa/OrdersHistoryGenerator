@@ -9,7 +9,7 @@ class AbstractConnection(abc.ABC):
     @abc.abstractmethod
     def close(self, *args, **kwargs):
         pass
-    
+
     @abc.abstractmethod
     def is_available(self):
         pass

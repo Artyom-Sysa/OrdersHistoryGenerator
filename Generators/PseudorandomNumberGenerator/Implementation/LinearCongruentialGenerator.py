@@ -21,6 +21,8 @@ from the same r(0). One can also reproduce such sequence with a different progra
 because the formula is so simple.
 
 '''
+
+
 class LinearCongruentialGenerator(PseudorandomNumberGenerator):
     __generators = dict()
 
