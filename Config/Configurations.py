@@ -3,6 +3,7 @@ import os
 from Decorators.Decorators import singleton
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 from Utils.Utils import Utils
+from Enums.ExchangeType import ExchangeType
 
 
 @singleton
@@ -21,19 +22,13 @@ class Configuration:
                 ValuesNames.BLUE_ZONE_ORDERS_PERCENT: 25,
                 ValuesNames.BATCH_SIZE: 100,
                 ValuesNames.CURRENCY_DEVIATION_PERCENT: 5,
-                ValuesNames.ORDER_HISTORY_WRITE_FILE_PATH: os.path.join(Utils.get_project_root_path(), 'Resources',
-                                                                        'Result.csv'),
-                ValuesNames.CURRENCY_PAIRS_FILE_PATH: os.path.join(Utils.get_project_root_path(), 'Resources',
-                                                                   'CurrencyPairs.txt'),
-                ValuesNames.TAGS_FILE_PATH: os.path.join(Utils.get_project_root_path(), 'Resources', 'Tags.txt'),
-                ValuesNames.DEFAULT_SETTING_FILE_PATH: os.path.join(Utils.get_project_root_path(), 'Resources',
-                                                                    'settings.ini')
+                ValuesNames.ORDER_HISTORY_WRITE_FILE_PATH: os.path.join('.', 'Resources', 'Result.csv'),
+                ValuesNames.CURRENCY_PAIRS_FILE_PATH: os.path.join('.', 'Resources', 'CurrencyPairs.txt'),
+                ValuesNames.TAGS_FILE_PATH: os.path.join('.', 'Resources', 'Tags.txt'),
+                ValuesNames.DEFAULT_SETTING_FILE_PATH: os.path.join('.', 'Resources', 'settings.ini')
             },
             ValuesNames.LOGGER_SECTION_NAME: {
-                ValuesNames.LOGGING_FOLDER_PATH: os.path.join(Utils.get_project_root_path(), 'Log'),
-                ValuesNames.LOGGER_FORMAT: '%%(levelname)s	%%(asctime)s.%%(msecs)d   %%(name)s : %%(message)s',
-                ValuesNames.LOGGER_DATE_FORMAT: '%%d-%%m-%%Y %%H:%%M:%%S',
-                ValuesNames.LOGGER_LEVEL: 'DEBUG'
+                ValuesNames.LOGGING_CONF_FILE_PATH: os.path.join('.', 'Resources', 'logging.conf'),
             },
             ValuesNames.MYSQL_SECTION_NAME: {
                 ValuesNames.MYSQL_HOST: '127.0.0.1',
@@ -49,6 +44,7 @@ class Configuration:
                 ValuesNames.RMQ_USER: 'guest',
                 ValuesNames.RMQ_PASSWORD: 'guest',
                 ValuesNames.RMQ_EXCHANGE_NAME: 'orders_records',
+                ValuesNames.RMQ_EXCHANGE_TYPE: ExchangeType.TOPIC.value,
                 ValuesNames.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY: 'r.order.red-zone.order-history-generator',
                 ValuesNames.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY: 'r.order.blue-zone.order-history-generator',
                 ValuesNames.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY: 'r.order.green-zone.order-history-generator',
@@ -191,6 +187,7 @@ class ValuesNames:
     BLUE_ZONE_ORDERS_PERCENT = 'blue_zone_orders_percent'
     CURRENCY_DEVIATION_PERCENT = 'currency_deviation_percent'
     LOGGING_FOLDER_PATH = 'logging_folder_path'
+    LOGGING_CONF_FILE_PATH = 'logging_configurations_file_path'
     LOGGER_FORMAT = 'logger_format'
     LOGGER_DATE_FORMAT = 'logger_date_format'
     LOGGER_LEVEL = 'logger_level'
@@ -286,11 +283,12 @@ class ValuesNames:
     RMQ_USER = 'rabbitmq_user'
     RMQ_PASSWORD = 'rabbitmq_password'
     RMQ_EXCHANGE_NAME = 'rabbitmq_exchange_name'
+    RMQ_EXCHANGE_TYPE = 'rabbitmq_exchange_type'
     RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY = 'rabbitmq_red_records_routing_key'
     RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY = 'rabbitmq_blue_records_routing_key'
     RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY = 'rabbitmq_gree_records_routing_key'
 
-    MYSQL_INSERT_QUERY = 'INSERT INTO `OrdersHistory`.`History`(`id`,`direction`,`currency_pair`,`init_px`,`fill_px`,`init_vol`,`fill_vol`,`status`,`datetime`,`tags`,`description`, `zone`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
+    MYSQL_INSERT_QUERY = 'INSERT INTO `OrdersHistory`.`History`(`record_id`, `direction`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status`, `datetime`, `tags`, `description`, `zone`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
 
     MYSQL_SECTION_NAME = 'MYSQL'
     MYSQL_HOST = 'mysql_host'

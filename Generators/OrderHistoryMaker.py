@@ -59,10 +59,12 @@ class OrderHistoryMaker:
 
         self.history.clear_history()
 
-        Logger.info(__file__, 'Order history making started')
+        Logger.info(__file__, 'Generating order history started')
 
         self.__generate_green_orders()
         self.__generate_red_blue_orders()
+
+        Logger.info(__file__, 'Generating order history finished')
 
     def __get_order_in_green_zone(self, id, status_sequence, period):
         '''
@@ -132,6 +134,7 @@ class OrderHistoryMaker:
                 period_limit = self.configs.orders_volumes_for_generation[period - 1][Values.GREEN_ZONE_VOLUME]
 
             order = self.__generate_general_order_information()
+
             self.history.orders[order.id] = order
             self.history.green_records.extend(self.__get_order_in_green_zone(order.id, order.status_sequence, period))
 
@@ -251,6 +254,9 @@ class OrderHistoryMaker:
             Logger.error(__file__, "Loading currency pairs from file {} failed".format(
                 self.configs.settings[Values.GENERAL_SECTION_NAME][Values.CURRENCY_PAIRS_FILE_PATH]))
 
+        if len(self.configs.currency_pairs) == 0:
+            exit(-1)
+
     def __load_tags_from_file(self):
         '''
         Load tags from file by path in config object
@@ -278,6 +284,9 @@ class OrderHistoryMaker:
         except:
             Logger.error(__file__, "Loading tags from file {} failed".format(
                 self.configs.settings[Values.GENERAL_SECTION_NAME][Values.TAGS_FILE_PATH]))
+
+        if len(self.configs.tags) == 0:
+            exit(-2)
 
     def __calculate_orders_period_volumes(self):
         '''
@@ -378,6 +387,8 @@ class OrderHistoryMaker:
         Call all function for prepare to generation ordera
         '''
 
+        Logger.info(__file__, "Execute preparing to execution")
+
         self.__load_currency_pairs_from_file()
         self.__load_tags_from_file()
         self.__calculate_orders_period_volumes()
@@ -385,6 +396,8 @@ class OrderHistoryMaker:
         self.__calculate_first_generation_period_start_date()
         self.__calculate_avg_values_of_id()
         self.__register_lcg_generators()
+
+        Logger.info(__file__, "Execute preparing finished")
 
     def __calculate_avg_values_of_id(self):
         '''
@@ -409,30 +422,40 @@ class OrderHistoryMaker:
         Register all generators setting to LCG generator
         '''
 
+        Logger.info(__file__, "Started registration linear congruential generators configs ")
+
         for section in self.configs.settings:
             if 'GENERATOR' in section:
                 LCG.set_linear_congruential_generator(section, self.configs.settings[section])
+
+        Logger.info(__file__, "Registration linear congruential generators configs finished")
 
     def write_to_file(self):
         '''
         Writing orders records history to file
         '''
 
+        Logger.info(__file__, 'Start writing orders records history to file')
+
         path = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDER_HISTORY_WRITE_FILE_PATH]
         Utils.remove_file_if_exists(path)
 
         file_service = CsvFileService(path)
-
+        file_service.open_descriptor('a')
         self.__write_list(file_service, self.history.green_records, 'Green records writing to file')
         self.__write_list(file_service, self.history.red_records, 'Red records writing to file')
         self.__write_list(file_service, self.history.blue_records, 'Blue records writing to file')
 
         file_service.close()
 
+        Logger.info(__file__, 'Writing orders records history to file finished')
+
     def clear_history(self):
         self.history.clear_history()
 
     def __write_list(self, file_service, list, name_stat):
+
+        Logger.info(__file__, 'Writing next list with records history to file started')
 
         previous_time = datetime.datetime.now()
         counter = 0
@@ -446,11 +469,11 @@ class OrderHistoryMaker:
                 order[Values.DIRECTION],
                 order[Values.CURRENCY_PAIR_NAME],
                 order[Values.INIT_PX],
-                order[Values.INIT_VOLUME],
                 order[Values.FILL_PX] if record.status in [Status.FILLED, Status.PARTIAL_FILLED] else 0,
+                order[Values.INIT_VOLUME],
                 order[Values.FILL_VOLUME] if record.status in [Status.FILLED, Status.PARTIAL_FILLED] else 0,
-                record.timestamp_millis,
                 record.status.value,
+                record.timestamp_millis,
                 order[Values.TAGS],
                 order[Values.DESCRIPTIONS],
                 record.zone.value
@@ -470,9 +493,12 @@ class OrderHistoryMaker:
                                       (datetime.datetime.now() - previous_time).total_seconds() * 1000)
 
     def read_from_file(self):
+
+        Logger.info(__file__, 'Started reading records history from file')
+
         file_service = CsvFileService(
             self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDER_HISTORY_WRITE_FILE_PATH])
-
+        file_service.open_descriptor('r')
         start = datetime.datetime.now()
 
         for row in file_service.read():
@@ -480,6 +506,12 @@ class OrderHistoryMaker:
 
         self.__add_time_statistic('Read and sort records by zones',
                                   (datetime.datetime.now() - start).total_seconds() * 1000)
+
+        Logger.info(__file__, 'Reading records history from file finished')
+        Logger.debug(__file__, 'Total loaded {} records(Red: {}, Green: {}, Blue: {})'.format(
+            len(self.readed_red_records) + len(self.readed_green_records) + len(self.readed_blue_records),
+            len(self.readed_red_records), len(self.readed_green_records), len(self.readed_blue_records)
+        ))
 
     @staticmethod
     def __add_time_statistic(name, value):
@@ -503,6 +535,7 @@ class OrderHistoryMaker:
             self.readed_red_records.append(row)
 
     def send_readed_records_to_rmq(self):
+        Logger.info(__file__, 'Sending records to RabbitMQ started')
         rmq_settings = self.configs.settings[Values.RMQ_SECTION_NAME]
 
         rmq = RmqService()
@@ -512,7 +545,13 @@ class OrderHistoryMaker:
 
         rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
 
-        rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME], exchange_type=ExchangeType.TOPIC)
+        try:
+            rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                                 exchange_type=ExchangeType(rmq_settings[Values.RMQ_EXCHANGE_TYPE]))
+        except ValueError as er:
+            Logger.error(__file__, er.args)
+            Logger.info(__file__, 'Sending records to RabbitMQ aborted')
+            return
 
         rmq.declare_queue(queue_name=Zone.RED.value)
         rmq.declare_queue(queue_name=Zone.BLUE.value)
@@ -534,19 +573,37 @@ class OrderHistoryMaker:
                                 rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY],
                                 'Send RabbitMQ green zone records')
 
+        Logger.info(__file__, 'Sending records to RabbitMQ finished')
+
     def send_readed_records_to_mysql(self):
+        Logger.info(__file__, 'Start sending records to MySQL')
+
         mysql_settings = self.configs.settings[Values.MYSQL_SECTION_NAME]
 
         mysql = MySqlService(user=mysql_settings[Values.MYSQL_USER], password=mysql_settings[Values.MYSQL_PASSWORD],
                              host=mysql_settings[Values.MYSQL_HOST], port=mysql_settings[Values.MYSQL_PORT],
                              database=mysql_settings[Values.MYSQL_DB_NAME])
+        try:
+            mysql.open_connection()
+
+            mysql.execute(
+                f'TRUNCATE `{self.configs.settings[Values.MYSQL_SECTION_NAME][Values.MYSQL_DB_NAME]}`.`History`')
+        except AttributeError as er:
+            Logger.error(__file__, er.args)
+            Logger.info(__file__, 'Sending records to MySQL aborted')
+            return
 
         self.__send_list_to_mysql(mysql, self.readed_red_records, 'Send red zones records to MySql')
         self.__send_list_to_mysql(mysql, self.readed_blue_records, 'Send blue zones records to MySql')
         self.__send_list_to_mysql(mysql, self.readed_green_records, 'Send green zones records to MySql')
 
+        mysql.close_connection()
+
+        Logger.info(__file__, 'Sending records to MySQL finished')
 
     def __send_list_to_mysql(self, mysql, list, name_stat):
+        Logger.info(__file__, 'Sending next list wit records to MySQL')
+
         previous_time = datetime.datetime.now()
         counter = 0
 
@@ -577,21 +634,22 @@ class OrderHistoryMaker:
             if order[1] == Direction.BUY.value else Entities.Protobuf.Direction_pb2.SELL
         result.currency_pair_name = order[2]
         result.init_currency_pair_value = float(order[3])
-        result.init_volume = int(order[4])
-        result.fill_currency_pair_value = float(order[5])
+        result.fill_currency_pair_value = float(order[4])
+        result.init_volume = int(order[5])
         result.fill_volume = int(order[6])
-        result.timestamp_millis = int(order[7])
 
-        if order[8] == Status.NEW.value:
+        if order[7] == Status.NEW.value:
             result.status = Entities.Protobuf.Status_pb2.STATUS_NEW
-        if order[8] == Status.TO_PROVIDER.value:
+        if order[7] == Status.TO_PROVIDER.value:
             result.status = Entities.Protobuf.Status_pb2.STATUS_TO_PROVIDER
-        if order[8] == Status.PARTIAL_FILLED.value:
+        if order[7] == Status.PARTIAL_FILLED.value:
             result.status = Entities.Protobuf.Status_pb2.STATUS_PARTIAL_FILLED
-        if order[8] == Status.REJECTED.value:
+        if order[7] == Status.REJECTED.value:
             result.status = Entities.Protobuf.Status_pb2.STATUS_REJECTED
-        if order[8] == Status.FILLED.value:
+        if order[7] == Status.FILLED.value:
             result.status = Entities.Protobuf.Status_pb2.STATUS_FILLED
+
+        result.timestamp_millis = int(order[8])
 
         result.tags = order[9]
         result.description = order[10]
@@ -599,6 +657,8 @@ class OrderHistoryMaker:
         return result
 
     def __send_list_to_rmq(self, rmq, list, key, name_stat):
+        Logger.info(__file__, 'Sending next list with records to RabbitMQ')
+
         previous_time = datetime.datetime.now()
         counter = 0
 

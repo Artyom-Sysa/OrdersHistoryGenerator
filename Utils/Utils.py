@@ -129,7 +129,7 @@ class Utils:
         '''
         :return: current date with format
         '''
-        return datetime.datetime.today().strftime('%d-%m-%Y')
+        return datetime.datetime.today().strftime('%d-%m-%Y %H-%M-%S-%f')
 
     @staticmethod
     def create_folder_if_not_exists(folder_path):
@@ -175,3 +175,15 @@ class Utils:
                 os.remove(path)
         except:
             pass
+
+    @staticmethod
+    def get_abs_path_with_project_root_path(path):
+        '''
+        Get path of project root folder
+
+        :return: path of project root folder
+        '''
+        print(path)
+        print(os.path.join(os.path.dirname(os.path.dirname(__file__)), path))
+
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)), path)

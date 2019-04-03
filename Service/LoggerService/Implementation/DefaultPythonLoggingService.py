@@ -1,10 +1,14 @@
 import logging
+import logging.config
+import logging.handlers
+
 import os
 from enum import IntEnum
 from Utils.Utils import Utils
 from Service.LoggerService.LoggerService import LoggerService
 from Config.Configurations import ValuesNames as Values
 from Config.Configurations import Configuration
+import re
 
 
 class LoggingLevel(IntEnum):
@@ -31,7 +35,6 @@ class DefaultPythonLoggingService(LoggerService):
     after finishing configuration python in-build logger
     '''
     __journal = []
-
 
     '''
     String name of keys for journal items
@@ -62,14 +65,16 @@ class DefaultPythonLoggingService(LoggerService):
         :param message: logging message
         '''
         for log_item in cls.__journal:
-            logging.getLogger(log_item[cls.__LOGGER_NAME]).log(log_item[cls.__LOGGING_LEVEL].value,
-                                                               log_item[cls.__LOGGING_MESSAGE])
+            logging.getLogger().log(log_item[cls.__LOGGING_LEVEL].value,
+                                    log_item[cls.__LOGGING_MESSAGE])
         cls.__journal.clear()
 
         if level.value not in logging._levelToName:
             level = LoggingLevel.NOTSET
 
-        logging.getLogger(Utils.get_file_name(Utils.get_file_name(logger_file_path))).log(level, message)
+        file = Utils.get_file_name(Utils.get_file_name(logger_file_path))
+
+        logging.getLogger().log(level, "[{}] {}".format(file, message))
 
     @classmethod
     def critical(cls, logger_file_path, message):
@@ -109,25 +114,22 @@ class DefaultPythonLoggingService(LoggerService):
 
         cls.add_to_journal(__file__, LoggingLevel.INFO, 'Start execution function of configuration logger')
 
-        logging.basicConfig(
-            filename=os.path.join(configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGING_FOLDER_PATH],
-                                  Utils.get_current_date_with_format() + ".log"),
-            filemode='a',
-            format=configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_FORMAT].replace('%%', '%'),
-            datefmt=configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_DATE_FORMAT].replace('%%', '%'),
-            level=configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_LEVEL])
+        Utils.create_folder_if_not_exists(os.path.join(Utils.get_project_root_path(), 'Log'))
+        logging_settings_file_path = Configuration().settings[Values.LOGGER_SECTION_NAME][Values.LOGGING_CONF_FILE_PATH]
+
+        logging.config.fileConfig(logging_settings_file_path)
+
+        logger = logging.getLogger()
+
+        for handler_indx in range(0, len(logger.handlers)):
+            if isinstance(logger.handlers[handler_indx], logging.handlers.RotatingFileHandler):
+                path = logger.handlers[handler_indx].baseFilename
+                path_parts = os.path.splitext(path)
+                logger.handlers[handler_indx].baseFilename = path_parts[0] + " " \
+                                                             + Utils.get_current_date_with_format() + \
+                                                             path_parts[1]
+
+                if os.path.exists(path) and os.path.getsize(path) > 0:
+                    logger.handlers[handler_indx].doRollover()
 
         cls.add_to_journal(__file__, LoggingLevel.INFO, 'Execution function of configuration logger finished')
-        cls.debug(__file__,
-                     'Logger configurated with values: filename: {} | filemode: {} | format: {} | datefmt: {} | level: {}'.format(
-                         os.path.join(configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGING_FOLDER_PATH],
-                                      Utils.get_current_date_with_format() + ".log"),
-                         'a',
-                         configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_FORMAT].replace('%', '%%'),
-                         configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_DATE_FORMAT].replace('%',
-                                                                                                              '%%'),
-                         configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGER_LEVEL])
-                     )
-
-        Utils.create_folder_if_not_exists(configs.settings[Values.LOGGER_SECTION_NAME][Values.LOGGING_FOLDER_PATH])
-
