@@ -23,12 +23,13 @@ class ConsoleReporter(Reporter):
                 print(f'Max: {max_value} ms')
                 print(f'Min: {min_value} ms')
                 print(f'Avg: {avg_value} ms')
-                print(f'Tota: {total} ms')
+                print(f'Total: {total} ms')
             else:
                 print(f'{key}: {item[0]} ms')
             print('---------------')
             print()
 
         print('========== REPORT END ==========')
+        print()
 
         Logger.info(__file__, 'Reporting finished')
