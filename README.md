@@ -71,7 +71,7 @@ CREATE TABLE `History` (
   `fill_px` decimal(10,5) NOT NULL,
   `init_vol` int NOT NULL,
   `fill_vol` int NOT NULL,
-  `status` varchar(12) NOT NULL,
+  `status` varchar(13) NOT NULL,
   `datetime` bigint NOT NULL,
   `tags` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL,
