@@ -199,28 +199,28 @@ Order history generation
 Max: 94.749 ms
 Min: 65.82499999999999 ms
 Avg: 71.41035000000002 ms
-Tota: 1428.2070000000003 ms
+Total: 1428.2070000000003 ms
 ---------------
 
 Green records writing to file
 Max: 37.873 ms
 Min: 2.018 ms
 Avg: 8.806697674418604 ms
-Tota: 378.688 ms
+Total: 378.688 ms
 ---------------
 
 Red records writing to file
 Max: 7.003 ms
 Min: 5.957 ms
 Avg: 6.1824 ms
-Tota: 30.912000000000003 ms
+Total: 30.912000000000003 ms
 ---------------
 
 Blue records writing to file
 Max: 7.978000000000001 ms
 Min: 4.984 ms
 Avg: 6.218 ms
-Tota: 68.398 ms
+Total: 68.398 ms
 ---------------
 
 Read and sort records by zones: 42.884 ms
@@ -230,45 +230,46 @@ Send RabbitMQ red zone records
 Max: 85.77 ms
 Min: 30.918999999999997 ms
 Avg: 67.02079999999998 ms
-Tota: 335.1039999999999 ms
+Total: 335.1039999999999 ms
 ---------------
 
 Send RabbitMQ blue zone records
 Max: 111.69999999999999 ms
 Min: 37.898 ms
 Avg: 91.48254545454544 ms
-Tota: 1006.3079999999999 ms
+Total: 1006.3079999999999 ms
 ---------------
 
 Send RabbitMQ green zone records
 Max: 149.601 ms
 Min: 9.972999999999999 ms
 Avg: 90.87327906976743 ms
-Tota: 3907.551 ms
+Total: 3907.551 ms
 ---------------
 
 Send red zones records to MySql
 Max: 80.232 ms
 Min: 20.943 ms
 Avg: 46.6438 ms
-Tota: 233.219 ms
+Total: 233.219 ms
 ---------------
 
 Send blue zones records to MySql
 Max: 59.164 ms
 Min: 14.958 ms
 Avg: 34.75863636363636 ms
-Tota: 382.345 ms
+Total: 382.345 ms
 ---------------
 
 Send green zones records to MySql
 Max: 455.16 ms
 Min: 1.9949999999999999 ms
 Avg: 41.07883720930232 ms
-Tota: 1766.3899999999999 ms
+Total: 1766.3899999999999 ms
 ---------------
 
 ========== REPORT END ==========
+
 2019-04-03 15:55:23,337 - INFO - [ConsoleReporter] Reporting finished
 2019-04-03 15:55:23,337 - INFO - [Launcher] Order history generation finished
 2019-04-03 15:55:23,341 - INFO - [Launcher] Program finished
