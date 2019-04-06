@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package Entities.Protobuf.Proto;
 
-
-enum Direction {
-    BUY = 0;
-    SELL = 1;
+enum Zone {
+    RED = 0;
+    BLUE = 1;
+    GREEN = 2;
 }

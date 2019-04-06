@@ -1,3 +1,5 @@
+import time
+
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import DefaultPythonLoggingService as Logger
 import mysql.connector
 
@@ -48,15 +50,16 @@ class MySqlService(DbService):
 
     def execute_multiple(self, query, params):
         try:
-            if not self.__connection.is_available():
-                self.__connection.open()
+            while True:
+                if not self.__connection.is_available():
+                    self.__connection.open()
 
-            cursor = self.__connection.get_cursor()
+                cursor = self.__connection.get_cursor()
 
-            if cursor is not None:
-                cursor.executemany(query, params)
-
-                self.__connection.commit()
+                if cursor is not None:
+                    cursor.executemany(query, params)
+                    if self.__connection.commit():
+                        break
 
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)

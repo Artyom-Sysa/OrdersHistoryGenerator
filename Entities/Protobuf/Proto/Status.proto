@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package Entities.Protobuf.Proto;
+
 enum Status {
     STATUS_NEW = 0;
     STATUS_TO_PROVIDER = 1;

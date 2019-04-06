@@ -1,5 +1,5 @@
 class OrderStatusChangingInfo:
-    def __init__(self, order_id, timestamp_millis, status, zone):
+    def __init__(self, order_id, timestamp_millis, status, zone, period):
         '''
         Set params of order status changing information
 
@@ -12,6 +12,7 @@ class OrderStatusChangingInfo:
         self.timestamp_millis = timestamp_millis
         self.status = status
         self.zone = zone
+        self.period = period
 
     def __str__(self):
         return 'ORDER ID: {}, TIMESTAMP: {}, STATUS: {}, ZONE: {}'.format(self.order_id,

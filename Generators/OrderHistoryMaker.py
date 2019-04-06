@@ -1,44 +1,39 @@
 import datetime
 import re
 
+import Entities.Protobuf.Direction_pb2
+import Entities.Protobuf.Direction_pb2
+import Entities.Protobuf.OrderInformation_pb2 as OrderInformation
+import Entities.Protobuf.Status_pb2
+import Entities.Protobuf.Zone_pb2
 from Config.Configurations import Configuration
 from Config.Configurations import ValuesNames as Values
 from Entities.OrderHistory import OrderHistory
+from Entities.StatisticsDataStorage import StatisticsDataStorage
+from Enums.Direction import Direction
+from Enums.ExchangeType import ExchangeType
 from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
+from Enums.Status import Status
+from Enums.Zone import Zone
 from Generators.GeneralOrderInformationBuilder import GeneralOrderInformationBuilder
 from Generators.OrderRecordsBuilder import OrderRecordsBuilder
 from Generators.PseudorandomNumberGenerator.Implementation.IdGenerator import IdGenerator
 from Generators.PseudorandomNumberGenerator.Implementation.LinearCongruentialGenerator import \
     LinearCongruentialGenerator as LCG
+from Service.FileService.Implementation.CsvFileService import CsvFileService
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
     DefaultPythonLoggingService as Logger
-from Utils.Utils import Utils
-from Enums.Zone import Zone
-from Entities.StatisticsDataStorage import StatisticsDataStorage
-
-from Service.FileService.Implementation.CsvFileService import CsvFileService
-from Enums.Status import Status
 from Service.MessageBrokerService.Implementation.RmqService import RmqService
-from Enums.ExchangeType import ExchangeType
-import Entities.Protobuf.OrderInformation_pb2 as OrderInformation
-import Entities.Protobuf.Direction_pb2
-import pprint
-from Enums.Direction import Direction
-import Entities.Protobuf.Direction_pb2
-import Entities.Protobuf.Status_pb2
-from Service.DbService.Implementation.MySqlService import MySqlService
+from Utils.Utils import Utils
 
 
 class OrderHistoryMaker:
-    def __init__(self):
+    def __init__(self, finish_event):
         self.configs = Configuration()
         self.records_builder = OrderRecordsBuilder()
         self.order_builder = GeneralOrderInformationBuilder()
         self.history = OrderHistory()
-
-        self.readed_green_records = None
-        self.readed_red_records = None
-        self.readed_blue_records = None
+        self.fininsh_event = finish_event
 
     def __count_volume_by_color(self, color):
         '''
@@ -59,12 +54,55 @@ class OrderHistoryMaker:
 
         self.history.clear_history()
 
+        rmq_settings = self.configs.settings[Values.RMQ_SECTION_NAME]
+
+        self.rmq = RmqService()
+
+        while not self.rmq.open_connection(host=rmq_settings[Values.RMQ_HOST], port=rmq_settings[Values.RMQ_PORT],
+                                    virtual_host=rmq_settings[Values.RMQ_VIRTUAL_HOST],
+                                    user=rmq_settings[Values.RMQ_USER],
+                                    password=rmq_settings[Values.RMQ_PASSWORD]):
+            self.rmq.reconfig()
+
+        self.rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
+
+        try:
+            self.rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                                      exchange_type=ExchangeType(rmq_settings[Values.RMQ_EXCHANGE_TYPE]))
+        except ValueError as er:
+            Logger.error(__file__, er.args)
+            Logger.info(__file__, 'Sending records to RabbitMQ aborted')
+            return
+
+        self.rmq.declare_queue(queue_name=Zone.RED.value)
+        self.rmq.declare_queue(queue_name=Zone.BLUE.value)
+        self.rmq.declare_queue(queue_name=Zone.GREEN.value)
+
+        self.rmq.queue_bind(Zone.RED.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                            rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY])
+        self.rmq.queue_bind(Zone.BLUE.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                            rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY])
+        self.rmq.queue_bind(Zone.GREEN.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                            rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY])
+
+        self.rmq.queue_purge(queue_name=Zone.RED.value)
+        self.rmq.queue_purge(queue_name=Zone.BLUE.value)
+        self.rmq.queue_purge(queue_name=Zone.GREEN.value)
+
+
         Logger.info(__file__, 'Generating order history started')
 
         self.__generate_green_orders()
         self.__generate_red_blue_orders()
 
         Logger.info(__file__, 'Generating order history finished')
+
+        self.rmq.publish(
+            self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_NAME],
+            self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY],
+            'stop')
+
+        self.fininsh_event.set()
 
     def __get_order_in_green_zone(self, id, status_sequence, period):
         '''
@@ -136,11 +174,12 @@ class OrderHistoryMaker:
             order = self.__generate_general_order_information()
 
             self.history.orders[order.id] = order
-            self.history.green_records.extend(self.__get_order_in_green_zone(order.id, order.status_sequence, period))
+            self.history.records.extend(self.__get_order_in_green_zone(order.id, order.status_sequence, period))
 
             if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
-                self.__add_time_statistic('Order history generation',
-                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                self.add_time_statistic('Order history generation',
+                                        (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                self.send_to_rmq()
                 previous_time = datetime.datetime.now()
 
             Logger.debug(__file__, f'Generation {i + 1} green order history finished')
@@ -173,21 +212,16 @@ class OrderHistoryMaker:
             order = self.__generate_general_order_information()
             self.history.orders[order.id] = order
 
-            for record in self.__get_order_in_blue_red_zone(order.id,
-                                                            order.status_sequence,
-                                                            order.statuses_in_blue_zone,
-                                                            period_start,
-                                                            period_finish):
-                if record.zone == Zone.RED:
-                    self.history.red_records.append(record)
-                if record.zone == Zone.BLUE:
-                    self.history.blue_records.append(record)
-                if record.zone == Zone.GREEN:
-                    self.history.green_records.append(record)
+            self.history.records.extend(self.__get_order_in_blue_red_zone(order.id,
+                                                                          order.status_sequence,
+                                                                          order.statuses_in_blue_zone,
+                                                                          period_start,
+                                                                          period_finish))
 
             if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
-                self.__add_time_statistic('Order history generation',
-                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                self.add_time_statistic('Order history generation',
+                                        (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                self.send_to_rmq()
                 previous_time = datetime.datetime.now()
 
             Logger.debug(__file__, f'Generation {i - total_green_volume} order history in blue-red zone finished')
@@ -221,8 +255,9 @@ class OrderHistoryMaker:
         Logger.info(__file__, 'Generation blue-red zone orders history finished')
 
         if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] != 0:
-            self.__add_time_statistic('Order history generation',
-                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+            self.add_time_statistic('Order history generation',
+                                    (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+            self.send_to_rmq()
 
     def __load_currency_pairs_from_file(self):
         '''
@@ -430,251 +465,75 @@ class OrderHistoryMaker:
 
         Logger.info(__file__, "Registration linear congruential generators configs finished")
 
-    def write_to_file(self):
-        '''
-        Writing orders records history to file
-        '''
-
-        Logger.info(__file__, 'Start writing orders records history to file')
-
-        path = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDER_HISTORY_WRITE_FILE_PATH]
-        Utils.remove_file_if_exists(path)
-
-        file_service = CsvFileService(path)
-        file_service.open_descriptor('a')
-        self.__write_list(file_service, self.history.green_records, 'Green records writing to file')
-        self.__write_list(file_service, self.history.red_records, 'Red records writing to file')
-        self.__write_list(file_service, self.history.blue_records, 'Blue records writing to file')
-
-        file_service.close()
-
-        Logger.info(__file__, 'Writing orders records history to file finished')
-
     def clear_history(self):
         self.history.clear_history()
 
-    def __write_list(self, file_service, list, name_stat):
-
-        Logger.info(__file__, 'Writing next list with records history to file started')
-
-        previous_time = datetime.datetime.now()
-        counter = 0
-        data = []
-
-        for record in list:
-            order = self.history.orders[record.order_id].to_list()
-
-            data.append([
-                order[Values.ID],
-                order[Values.DIRECTION],
-                order[Values.CURRENCY_PAIR_NAME],
-                order[Values.INIT_PX],
-                order[Values.FILL_PX] if record.status in [Status.FILLED, Status.PARTIAL_FILLED] else 0,
-                order[Values.INIT_VOLUME],
-                order[Values.FILL_VOLUME] if record.status in [Status.FILLED, Status.PARTIAL_FILLED] else 0,
-                record.status.value,
-                record.timestamp_millis,
-                order[Values.TAGS],
-                order[Values.DESCRIPTIONS],
-                record.zone.value
-            ])
-
-            counter += 1
-            if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
-                file_service.write(data, 'a')
-                self.__add_time_statistic(name_stat,
-                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-                data = []
-                previous_time = datetime.datetime.now()
-
-        if len(data) > 0:
-            file_service.write(data, 'a')
-            self.__add_time_statistic(name_stat,
-                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-
-    def read_from_file(self):
-
-        Logger.info(__file__, 'Started reading records history from file')
-
-        file_service = CsvFileService(
-            self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDER_HISTORY_WRITE_FILE_PATH])
-        file_service.open_descriptor('r')
-        start = datetime.datetime.now()
-
-        for row in file_service.read():
-            self.__add_row_to_list(row)
-
-        self.__add_time_statistic('Read and sort records by zones',
-                                  (datetime.datetime.now() - start).total_seconds() * 1000)
-
-        Logger.info(__file__, 'Reading records history from file finished')
-        Logger.debug(__file__, 'Total loaded {} records(Red: {}, Green: {}, Blue: {})'.format(
-            len(self.readed_red_records) + len(self.readed_green_records) + len(self.readed_blue_records),
-            len(self.readed_red_records), len(self.readed_green_records), len(self.readed_blue_records)
-        ))
-
     @staticmethod
-    def __add_time_statistic(name, value):
+    def add_time_statistic(name, value):
         if name not in StatisticsDataStorage.statistics:
             StatisticsDataStorage.statistics[name] = []
         StatisticsDataStorage.statistics[name].append(value)
 
-    def __add_row_to_list(self, row):
-        zone = row[11]
-        if Zone.GREEN.value == zone:
-            if self.readed_green_records is None:
-                self.readed_green_records = []
-            self.readed_green_records.append(row)
-        if Zone.BLUE.value == zone:
-            if self.readed_blue_records is None:
-                self.readed_blue_records = []
-            self.readed_blue_records.append(row)
-        if Zone.RED.value == zone:
-            if self.readed_red_records is None:
-                self.readed_red_records = []
-            self.readed_red_records.append(row)
-
-    def send_readed_records_to_rmq(self):
-        Logger.info(__file__, 'Sending records to RabbitMQ started')
-        rmq_settings = self.configs.settings[Values.RMQ_SECTION_NAME]
-
-        rmq = RmqService()
-        rmq.open_connection(host=rmq_settings[Values.RMQ_HOST], port=rmq_settings[Values.RMQ_PORT],
-                            virtual_host=rmq_settings[Values.RMQ_VIRTUAL_HOST], user=rmq_settings[Values.RMQ_USER],
-                            password=rmq_settings[Values.RMQ_PASSWORD])
-
-        rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
-
-        try:
-            rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                                 exchange_type=ExchangeType(rmq_settings[Values.RMQ_EXCHANGE_TYPE]))
-        except ValueError as er:
-            Logger.error(__file__, er.args)
-            Logger.info(__file__, 'Sending records to RabbitMQ aborted')
-            return
-
-        rmq.declare_queue(queue_name=Zone.RED.value)
-        rmq.declare_queue(queue_name=Zone.BLUE.value)
-        rmq.declare_queue(queue_name=Zone.GREEN.value)
-
-        rmq.queue_bind(Zone.RED.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                       rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY])
-        rmq.queue_bind(Zone.BLUE.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                       rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY])
-        rmq.queue_bind(Zone.GREEN.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                       rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY])
-
-        rmq.queue_purge(queue_name=Zone.RED.value)
-        rmq.queue_purge(queue_name=Zone.BLUE.value)
-        rmq.queue_purge(queue_name=Zone.GREEN.value)
-
-        self.__send_list_to_rmq(rmq, self.readed_red_records, rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY],
-                                'Send RabbitMQ red zone records')
-        self.__send_list_to_rmq(rmq, self.readed_blue_records,
-                                rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY],
-                                'Send RabbitMQ blue zone records')
-        self.__send_list_to_rmq(rmq, self.readed_green_records,
-                                rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY],
-                                'Send RabbitMQ green zone records')
-
-        Logger.info(__file__, 'Sending records to RabbitMQ finished')
-
-    def send_readed_records_to_mysql(self):
-        Logger.info(__file__, 'Start sending records to MySQL')
-
-        mysql_settings = self.configs.settings[Values.MYSQL_SECTION_NAME]
-
-        mysql = MySqlService(user=mysql_settings[Values.MYSQL_USER], password=mysql_settings[Values.MYSQL_PASSWORD],
-                             host=mysql_settings[Values.MYSQL_HOST], port=mysql_settings[Values.MYSQL_PORT],
-                             database=mysql_settings[Values.MYSQL_DB_NAME])
-        try:
-            mysql.open_connection()
-
-            mysql.execute(
-                f'TRUNCATE `{self.configs.settings[Values.MYSQL_SECTION_NAME][Values.MYSQL_DB_NAME]}`.`History`')
-        except AttributeError as er:
-            Logger.error(__file__, er.args)
-            Logger.info(__file__, 'Sending records to MySQL aborted')
-            return
-
-        self.__send_list_to_mysql(mysql, self.readed_red_records, 'Send red zones records to MySql')
-        self.__send_list_to_mysql(mysql, self.readed_blue_records, 'Send blue zones records to MySql')
-        self.__send_list_to_mysql(mysql, self.readed_green_records, 'Send green zones records to MySql')
-
-        mysql.close_connection()
-
-        Logger.info(__file__, 'Sending records to MySQL finished')
-
-    def __send_list_to_mysql(self, mysql, list, name_stat):
-        Logger.info(__file__, 'Sending next list wit records to MySQL')
-
-        previous_time = datetime.datetime.now()
-        counter = 0
-
-        data = []
-
-        for record in list:
-            data.append((record[0], record[1], record[2], record[3], record[4], record[5], record[6], record[7],
-                         record[8], record[9], record[10], record[11]))
-
-            counter += 1
-            if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
-                mysql.execute_multiple(Values.MYSQL_INSERT_QUERY, data)
-                data.clear()
-                self.__add_time_statistic(name_stat,
-                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-                previous_time = datetime.datetime.now()
-
-        if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] != 0:
-            mysql.execute_multiple(Values.MYSQL_INSERT_QUERY, data)
-            data.clear()
-            self.__add_time_statistic(name_stat,
-                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-
-    def __order_record_to_proto(self, order):
+    def __order_record_to_proto(self, record):
         result = OrderInformation.OrderInformation()
-        result.id = int(order[0])
-        result.direction = Entities.Protobuf.Direction_pb2.BUY \
-            if order[1] == Direction.BUY.value else Entities.Protobuf.Direction_pb2.SELL
-        result.currency_pair_name = order[2]
-        result.init_currency_pair_value = float(order[3])
-        result.fill_currency_pair_value = float(order[4])
-        result.init_volume = int(order[5])
-        result.fill_volume = int(order[6])
 
-        if order[7] == Status.NEW.value:
+        order = self.history.orders[record.order_id]
+
+        result.id = record.order_id
+        result.direction = Entities.Protobuf.Direction_pb2.BUY \
+            if order.direction == Direction.BUY.value else Entities.Protobuf.Direction_pb2.SELL
+        result.currency_pair_name = order.currency_pair_name
+        result.init_currency_pair_value = float(order.init_currency_pair_value)
+        result.fill_currency_pair_value = float(order.fill_currency_pair_value)
+        result.init_volume = int(order.init_volume)
+        result.fill_volume = int(order.fill_volume)
+
+        if record.status == Status.NEW:
             result.status = Entities.Protobuf.Status_pb2.STATUS_NEW
-        if order[7] == Status.TO_PROVIDER.value:
+        if record.status == Status.TO_PROVIDER:
             result.status = Entities.Protobuf.Status_pb2.STATUS_TO_PROVIDER
-        if order[7] == Status.PARTIAL_FILLED.value:
+        if record.status == Status.PARTIAL_FILLED:
             result.status = Entities.Protobuf.Status_pb2.STATUS_PARTIAL_FILLED
-        if order[7] == Status.REJECTED.value:
+        if record.status == Status.REJECTED:
             result.status = Entities.Protobuf.Status_pb2.STATUS_REJECTED
-        if order[7] == Status.FILLED.value:
+        if record.status == Status.FILLED:
             result.status = Entities.Protobuf.Status_pb2.STATUS_FILLED
 
-        result.timestamp_millis = int(order[8])
+        if record.zone == Zone.GREEN:
+            result.zone = Entities.Protobuf.Zone_pb2.GREEN
+        if record.zone == Zone.BLUE:
+            result.zone = Entities.Protobuf.Zone_pb2.BLUE
+        if record.zone == Zone.RED:
+            result.zone = Entities.Protobuf.Zone_pb2.RED
 
-        result.tags = order[9]
-        result.description = order[10]
+        result.timestamp_millis = int(record.timestamp_millis)
+
+        result.tags = order.tags
+        result.description = order.description
+        result.period = record.period
 
         return result
 
-    def __send_list_to_rmq(self, rmq, list, key, name_stat):
-        Logger.info(__file__, 'Sending next list with records to RabbitMQ')
+
+    def get_routing_key_by_zone(self, zone):
+        if zone == Zone.BLUE:
+            return self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY]
+        if zone == Zone.RED:
+            return self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY]
+        if zone == Zone.GREEN:
+            return self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY]
+
+    def send_to_rmq(self):
+        Logger.info(__file__, 'Sending ordres batch information to RabbitMQ')
 
         previous_time = datetime.datetime.now()
-        counter = 0
 
-        for record in list:
-            rmq.publish(self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_NAME], key,
-                        self.__order_record_to_proto(record).SerializeToString())
-            counter += 1
-            if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
-                self.__add_time_statistic(name_stat,
-                                          (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-                previous_time = datetime.datetime.now()
+        for record in self.history.records:
+            self.rmq.publish(self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_NAME],
+                             self.get_routing_key_by_zone(record.zone),
+                             self.__order_record_to_proto(record).SerializeToString())
 
-        if counter % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] != 0:
-            self.__add_time_statistic(name_stat,
-                                      (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+        self.add_time_statistic('Sending records batch to RabbitMQ',
+                                (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+
+        self.history.clear_history()

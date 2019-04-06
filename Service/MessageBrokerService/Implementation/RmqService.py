@@ -1,3 +1,5 @@
+import time
+
 from Service.MessageBrokerService.MessageBrokerService import MessabeBrokerService
 from Service.AbstractConnection.Implementation.RmqConnection import RmqConnection
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import DefaultPythonLoggingService as Logger
@@ -23,6 +25,7 @@ class RmqService(MessabeBrokerService):
         :param kwargs: must containts virtual_host
         :return:
         '''
+
         Logger.debug(__file__, 'Opening RMQ connection')
         self.conn = RmqConnection()
 
@@ -31,9 +34,11 @@ class RmqService(MessabeBrokerService):
         else:
             virtual_host = pika.connection.Parameters.DEFAULT_VIRTUAL_HOST
 
-        self.conn.open(host=host, port=port, user=user, password=password, virtual_host=virtual_host)
-
-        return self.conn.is_available()
+        try:
+            self.conn.open(host=host, port=port, user=user, password=password, virtual_host=virtual_host)
+            return self.conn.is_available()
+        except:
+            return False
 
     def close(self, *args, **kwargs):
         ''''
@@ -56,7 +61,6 @@ class RmqService(MessabeBrokerService):
         :param kwargs:
         :return:
         '''
-
         self.conn.publish(exchange_name, routing_key, body, properties=properties, mandatory=mandatory)
 
     def declare_exchange(self, exchange_name, exchange_type, passive=False, durable=True, auto_delete=False):
@@ -162,3 +166,9 @@ class RmqService(MessabeBrokerService):
 
     def start_consuming(self):
         return self.conn.start_consuming()
+
+    def stop_consuming(self):
+        return self.conn.stop_consuming()
+
+    def reconfig(self):
+        self.conn.reconfig()

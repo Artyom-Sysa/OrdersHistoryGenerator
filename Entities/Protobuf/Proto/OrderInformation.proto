@@ -1,7 +1,10 @@
 syntax = "proto3";
 
+package Entities.Protobuf.Proto;
+
 import "Direction.proto";
 import "Status.proto";
+import "Zone.proto";
 
 message OrderInformation {
     uint64 id = 1;
@@ -15,6 +18,8 @@ message OrderInformation {
     Status status = 9;
     string tags = 10;
     string description = 11;
+    Zone zone = 12;
+    int32 period = 13
 }
 
 

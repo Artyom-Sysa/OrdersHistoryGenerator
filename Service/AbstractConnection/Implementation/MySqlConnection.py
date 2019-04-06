@@ -1,4 +1,5 @@
 import abc
+import time
 
 import mysql.connector
 from Service.AbstractConnection.AbstractConnection import AbstractConnection
@@ -17,17 +18,25 @@ class MySqlConnection(AbstractConnection):
         self.__conn = None
 
     def open(self):
-        try:
-            self.__conn = mysql.connector.connect(user=self.__user,
-                                                  password=self.__password,
-                                                  host=self.__host,
-                                                  port=self.__port,
-                                                  database=self.__database)
+
+        self.__open_conn()
+        if not self.is_available():
+            self.reconnect()
+        else:
 
             Logger.debug(__file__, 'Created mysql connection with params {} {} {} {}'.format(self.__user,
                                                                                              self.__password,
                                                                                              self.__host,
                                                                                              self.__database))
+
+    def __open_conn(self):
+        try:
+            self.__conn = None
+            self.__conn = mysql.connector.connect(user=self.__user,
+                                                  password=self.__password,
+                                                  host=self.__host,
+                                                  port=self.__port,
+                                                  database=self.__database)
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
 
@@ -38,24 +47,40 @@ class MySqlConnection(AbstractConnection):
             Logger.error(__file__, err.msg)
 
     def is_available(self):
-        return self.__conn.is_connected()
+        try:
+            return self.__conn.is_connected()
+        except:
+            return False
 
     def get_cursor(self):
         try:
             return self.__conn.cursor()
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
-        return None
+            if not self.is_available():
+                self.reconnect()
+                self.get_cursor()
 
     def commit(self):
         try:
             self.__conn.commit()
+            return True
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
             self.rollback()
+            return False
+
 
     def rollback(self):
         try:
             self.__conn.rollback()
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
+
+    def reconnect(self):
+        while True:
+            self.__open_conn()
+            if not self.is_available():
+                time.sleep(1)
+            else:
+                break

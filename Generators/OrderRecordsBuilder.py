@@ -20,7 +20,6 @@ class OrderRecordsBuilder:
         self.__order_general_information = None
         self.__configs = Configuration()
 
-
         Logger.debug(__file__, 'Init OrderRecordsBuilder instance')
 
     def set_general_order_info(self, general_order_info):
@@ -56,12 +55,12 @@ class OrderRecordsBuilder:
         Logger.debug(__file__, 'Building order records in green zone finished')
         return [
             OrderStatusChangingInfo(id, self.__generate_ms_datetime(first_status_date, first_status_time), Status.NEW,
-                                    Zone.GREEN),
+                                    Zone.GREEN, period_index),
             OrderStatusChangingInfo(id, self.__generate_ms_datetime(second_status_date, second_status_time),
-                                    Status.TO_PROVIDER, Zone.GREEN),
+                                    Status.TO_PROVIDER, Zone.GREEN, period_index),
             OrderStatusChangingInfo(id, self.__generate_ms_datetime(third_status_date, third_status_time),
                                     self.__get_last_status(status_sequence),
-                                    Zone.GREEN)
+                                    Zone.GREEN, period_index)
         ]
 
     def build_order_records_in_blue_red_zone(self, id, status_sequence, statuses_in_blue_zone_, period_start,
@@ -88,7 +87,7 @@ class OrderRecordsBuilder:
             records.append(
                 OrderStatusChangingInfo(id,
                                         self.__generate_ms_datetime(first_status_date, first_status_time),
-                                        Status.NEW, Zone.BLUE)
+                                        Status.NEW, Zone.BLUE, period_start)
             )
 
         if second_status_date != 0:
@@ -96,7 +95,8 @@ class OrderRecordsBuilder:
                 OrderStatusChangingInfo(id,
                                         self.__generate_ms_datetime(second_status_date, second_status_time),
                                         Status.TO_PROVIDER,
-                                        Zone.BLUE if statuses_in_blue_zone_ == 2 else Zone.RED)
+                                        Zone.BLUE if statuses_in_blue_zone_ == 2 else Zone.RED,
+                                        period_start if statuses_in_blue_zone_ == 2 else period_end)
             )
 
         if third_status_date != 0:
@@ -104,7 +104,7 @@ class OrderRecordsBuilder:
                 OrderStatusChangingInfo(id,
                                         self.__generate_ms_datetime(third_status_date, third_status_time),
                                         self.__get_last_status(status_sequence),
-                                        Zone.RED)
+                                        Zone.RED, period_end)
             )
 
         Logger.debug(__file__, 'Building order records in blue-red zone finished')
