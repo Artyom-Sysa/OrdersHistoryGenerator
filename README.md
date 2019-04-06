@@ -56,7 +56,7 @@ MySQL database schema creating script:
 Database name can be any, but do not forget to specify this name in configurations.
 
 ```sql
-CREATE DATABASE IF NOT EXISTS `OrdersHistory`
+CREATE DATABASE IF NOT EXISTS `OrdersHistory`;
 
 USE `OrdersHistory`;
 

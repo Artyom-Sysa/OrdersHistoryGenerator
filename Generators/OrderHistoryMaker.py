@@ -564,6 +564,10 @@ class OrderHistoryMaker:
         rmq.queue_bind(Zone.GREEN.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
                        rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY])
 
+        rmq.queue_purge(queue_name=Zone.RED.value)
+        rmq.queue_purge(queue_name=Zone.BLUE.value)
+        rmq.queue_purge(queue_name=Zone.GREEN.value)
+
         self.__send_list_to_rmq(rmq, self.readed_red_records, rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY],
                                 'Send RabbitMQ red zone records')
         self.__send_list_to_rmq(rmq, self.readed_blue_records,
