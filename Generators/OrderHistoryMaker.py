@@ -20,7 +20,6 @@ from Generators.OrderRecordsBuilder import OrderRecordsBuilder
 from Generators.PseudorandomNumberGenerator.Implementation.IdGenerator import IdGenerator
 from Generators.PseudorandomNumberGenerator.Implementation.LinearCongruentialGenerator import \
     LinearCongruentialGenerator as LCG
-from Service.FileService.Implementation.CsvFileService import CsvFileService
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
     DefaultPythonLoggingService as Logger
 from Service.MessageBrokerService.Implementation.RmqService import RmqService
@@ -59,9 +58,9 @@ class OrderHistoryMaker:
         self.rmq = RmqService()
 
         while not self.rmq.open_connection(host=rmq_settings[Values.RMQ_HOST], port=rmq_settings[Values.RMQ_PORT],
-                                    virtual_host=rmq_settings[Values.RMQ_VIRTUAL_HOST],
-                                    user=rmq_settings[Values.RMQ_USER],
-                                    password=rmq_settings[Values.RMQ_PASSWORD]):
+                                           virtual_host=rmq_settings[Values.RMQ_VIRTUAL_HOST],
+                                           user=rmq_settings[Values.RMQ_USER],
+                                           password=rmq_settings[Values.RMQ_PASSWORD]):
             self.rmq.reconfig()
 
         self.rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
@@ -89,7 +88,6 @@ class OrderHistoryMaker:
         self.rmq.queue_purge(queue_name=Zone.BLUE.value)
         self.rmq.queue_purge(queue_name=Zone.GREEN.value)
 
-
         Logger.info(__file__, 'Generating order history started')
 
         self.__generate_green_orders()
@@ -100,6 +98,16 @@ class OrderHistoryMaker:
         self.rmq.publish(
             self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_NAME],
             self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY],
+            'stop')
+
+        self.rmq.publish(
+            self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_NAME],
+            self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY],
+            'stop')
+
+        self.rmq.publish(
+            self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_NAME],
+            self.configs.settings[Values.RMQ_SECTION_NAME][Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY],
             'stop')
 
         self.fininsh_event.set()
@@ -174,7 +182,11 @@ class OrderHistoryMaker:
             order = self.__generate_general_order_information()
 
             self.history.orders[order.id] = order
-            self.history.records.extend(self.__get_order_in_green_zone(order.id, order.status_sequence, period))
+            records = self.__get_order_in_green_zone(order.id, order.status_sequence, period)
+            self.history.records.extend(records)
+
+            self.inc_statistic('Generated orders', 1)
+            self.inc_statistic('Generated records', len(records))
 
             if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
                 self.add_time_statistic('Order history generation',
@@ -211,12 +223,14 @@ class OrderHistoryMaker:
 
             order = self.__generate_general_order_information()
             self.history.orders[order.id] = order
-
-            self.history.records.extend(self.__get_order_in_blue_red_zone(order.id,
-                                                                          order.status_sequence,
-                                                                          order.statuses_in_blue_zone,
-                                                                          period_start,
-                                                                          period_finish))
+            records = self.__get_order_in_blue_red_zone(order.id,
+                                                        order.status_sequence,
+                                                        order.statuses_in_blue_zone,
+                                                        period_start,
+                                                        period_finish)
+            self.history.records.extend(records)
+            self.inc_statistic('Generated orders', 1)
+            self.inc_statistic('Generated records', len(records))
 
             if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
                 self.add_time_statistic('Order history generation',
@@ -474,6 +488,12 @@ class OrderHistoryMaker:
             StatisticsDataStorage.statistics[name] = []
         StatisticsDataStorage.statistics[name].append(value)
 
+    def inc_statistic(self, name, value):
+        if name not in StatisticsDataStorage.statistics:
+            StatisticsDataStorage.statistics[name] = value
+        else:
+            StatisticsDataStorage.statistics[name] += value
+
     def __order_record_to_proto(self, record):
         result = OrderInformation.OrderInformation()
 
@@ -481,21 +501,27 @@ class OrderHistoryMaker:
 
         result.id = record.order_id
         result.direction = Entities.Protobuf.Direction_pb2.BUY \
-            if order.direction == Direction.BUY.value else Entities.Protobuf.Direction_pb2.SELL
+            if order.direction == Direction.BUY else Entities.Protobuf.Direction_pb2.SELL
         result.currency_pair_name = order.currency_pair_name
         result.init_currency_pair_value = float(order.init_currency_pair_value)
         result.fill_currency_pair_value = float(order.fill_currency_pair_value)
-        result.init_volume = int(order.init_volume)
-        result.fill_volume = int(order.fill_volume)
+        result.init_volume = order.init_volume
+        result.fill_volume = order.fill_volume
 
         if record.status == Status.NEW:
             result.status = Entities.Protobuf.Status_pb2.STATUS_NEW
+            result.fill_currency_pair_value = 0
+            result.fill_volume = 0
         if record.status == Status.TO_PROVIDER:
             result.status = Entities.Protobuf.Status_pb2.STATUS_TO_PROVIDER
+            result.fill_currency_pair_value = 0
+            result.fill_volume = 0
         if record.status == Status.PARTIAL_FILLED:
             result.status = Entities.Protobuf.Status_pb2.STATUS_PARTIAL_FILLED
         if record.status == Status.REJECTED:
             result.status = Entities.Protobuf.Status_pb2.STATUS_REJECTED
+            result.fill_currency_pair_value = 0
+            result.fill_volume = 0
         if record.status == Status.FILLED:
             result.status = Entities.Protobuf.Status_pb2.STATUS_FILLED
 
@@ -513,7 +539,6 @@ class OrderHistoryMaker:
         result.period = record.period
 
         return result
-
 
     def get_routing_key_by_zone(self, zone):
         if zone == Zone.BLUE:

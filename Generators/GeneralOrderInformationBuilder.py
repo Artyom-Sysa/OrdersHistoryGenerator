@@ -70,7 +70,7 @@ class GeneralOrderInformationBuilder:
         return self
 
     def set_init_volume(self, value):
-        self.__init_volume = value
+        self.__init_volume = float(value / 10**8)
         return self
 
     def set_fill_volume_deviation_percent(self, value):
@@ -84,8 +84,8 @@ class GeneralOrderInformationBuilder:
             elif self.__status_sequence == StatusSequence.FILLED:
                 self.__fill_volume = self.__init_volume
             else:
-                self.__fill_volume = int(Utils.calculate_percent_from_value(self.__init_volume,
-                                                                            self.__fill_volume_deviation_percent))
+                self.__fill_volume = Utils.calculate_percent_from_value(self.__init_volume,
+                                                                        self.__fill_volume_deviation_percent)
         return self
 
     def set_currency_pair_fill_value_by_deviation_percent(self, value):

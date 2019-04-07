@@ -288,7 +288,7 @@ class ValuesNames:
     RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY = 'rabbitmq_blue_records_routing_key'
     RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY = 'rabbitmq_gree_records_routing_key'
 
-    MYSQL_INSERT_QUERY = 'INSERT INTO `OrdersHistory`.`History`(`record_id`, `direction`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status`, `datetime`, `tags`, `description`, `zone`, `period`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
+    MYSQL_INSERT_QUERY = 'INSERT INTO `orders_history`.`history`(`record_id`, `direction_id`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status_id`, `datetime`, `tags`, `description`, `zone_id`, `period`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
 
     MYSQL_SECTION_NAME = 'MYSQL'
     MYSQL_HOST = 'mysql_host'

@@ -3,145 +3,145 @@
 # source: OrderInformation.proto
 
 import sys
-_b=sys.version_info[0]<3 and (lambda x:x) or (lambda x:x.encode('latin1'))
+
+_b = sys.version_info[0] < 3 and (lambda x: x) or (lambda x: x.encode('latin1'))
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
 from google.protobuf import symbol_database as _symbol_database
+
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
-
 
 import Entities.Protobuf.Direction_pb2 as Direction__pb2
 import Entities.Protobuf.Status_pb2 as Status__pb2
 import Entities.Protobuf.Zone_pb2 as Zone__pb2
 
-
 DESCRIPTOR = _descriptor.FileDescriptor(
-  name='OrderInformation.proto',
-  package='Entities.Protobuf.Proto',
-  syntax='proto3',
-  serialized_options=None,
-  serialized_pb=_b('\n\x16OrderInformation.proto\x12\x17\x45ntities.Protobuf.Proto\x1a\x0f\x44irection.proto\x1a\x0cStatus.proto\x1a\nZone.proto\"\x8a\x03\n\x10OrderInformation\x12\n\n\x02id\x18\x01 \x01(\x04\x12\x35\n\tdirection\x18\x02 \x01(\x0e\x32\".Entities.Protobuf.Proto.Direction\x12\x1a\n\x12\x63urrency_pair_name\x18\x03 \x01(\t\x12 \n\x18init_currency_pair_value\x18\x04 \x01(\x02\x12\x13\n\x0binit_volume\x18\x05 \x01(\x05\x12 \n\x18\x66ill_currency_pair_value\x18\x06 \x01(\x02\x12\x13\n\x0b\x66ill_volume\x18\x07 \x01(\x05\x12\x18\n\x10timestamp_millis\x18\x08 \x01(\x03\x12/\n\x06status\x18\t \x01(\x0e\x32\x1f.Entities.Protobuf.Proto.Status\x12\x0c\n\x04tags\x18\n \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x0b \x01(\t\x12+\n\x04zone\x18\x0c \x01(\x0e\x32\x1d.Entities.Protobuf.Proto.Zone\x12\x0e\n\x06period\x18\r \x01(\x05\x62\x06proto3')
-  ,
-  dependencies=[Direction__pb2.DESCRIPTOR,Status__pb2.DESCRIPTOR,Zone__pb2.DESCRIPTOR,])
-
-
-
+    name='OrderInformation.proto',
+    package='Entities.Protobuf.Proto',
+    syntax='proto3',
+    serialized_options=None,
+    serialized_pb=_b(
+        '\n\x16OrderInformation.proto\x12\x17\x45ntities.Protobuf.Proto\x1a\x0f\x44irection.proto\x1a\x0cStatus.proto\x1a\nZone.proto\"\x8a\x03\n\x10OrderInformation\x12\n\n\x02id\x18\x01 \x01(\x04\x12\x35\n\tdirection\x18\x02 \x01(\x0e\x32\".Entities.Protobuf.Proto.Direction\x12\x1a\n\x12\x63urrency_pair_name\x18\x03 \x01(\t\x12 \n\x18init_currency_pair_value\x18\x04 \x01(\x02\x12\x13\n\x0binit_volume\x18\x05 \x01(\x02\x12 \n\x18\x66ill_currency_pair_value\x18\x06 \x01(\x02\x12\x13\n\x0b\x66ill_volume\x18\x07 \x01(\x02\x12\x18\n\x10timestamp_millis\x18\x08 \x01(\x03\x12/\n\x06status\x18\t \x01(\x0e\x32\x1f.Entities.Protobuf.Proto.Status\x12\x0c\n\x04tags\x18\n \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x0b \x01(\t\x12+\n\x04zone\x18\x0c \x01(\x0e\x32\x1d.Entities.Protobuf.Proto.Zone\x12\x0e\n\x06period\x18\r \x01(\x05\x62\x06proto3')
+    ,
+    dependencies=[Direction__pb2.DESCRIPTOR, Status__pb2.DESCRIPTOR, Zone__pb2.DESCRIPTOR, ])
 
 _ORDERINFORMATION = _descriptor.Descriptor(
-  name='OrderInformation',
-  full_name='Entities.Protobuf.Proto.OrderInformation',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='id', full_name='Entities.Protobuf.Proto.OrderInformation.id', index=0,
-      number=1, type=4, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='direction', full_name='Entities.Protobuf.Proto.OrderInformation.direction', index=1,
-      number=2, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='currency_pair_name', full_name='Entities.Protobuf.Proto.OrderInformation.currency_pair_name', index=2,
-      number=3, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='init_currency_pair_value', full_name='Entities.Protobuf.Proto.OrderInformation.init_currency_pair_value', index=3,
-      number=4, type=2, cpp_type=6, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='init_volume', full_name='Entities.Protobuf.Proto.OrderInformation.init_volume', index=4,
-      number=5, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='fill_currency_pair_value', full_name='Entities.Protobuf.Proto.OrderInformation.fill_currency_pair_value', index=5,
-      number=6, type=2, cpp_type=6, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='fill_volume', full_name='Entities.Protobuf.Proto.OrderInformation.fill_volume', index=6,
-      number=7, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='timestamp_millis', full_name='Entities.Protobuf.Proto.OrderInformation.timestamp_millis', index=7,
-      number=8, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='status', full_name='Entities.Protobuf.Proto.OrderInformation.status', index=8,
-      number=9, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='tags', full_name='Entities.Protobuf.Proto.OrderInformation.tags', index=9,
-      number=10, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='description', full_name='Entities.Protobuf.Proto.OrderInformation.description', index=10,
-      number=11, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='zone', full_name='Entities.Protobuf.Proto.OrderInformation.zone', index=11,
-      number=12, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='period', full_name='Entities.Protobuf.Proto.OrderInformation.period', index=12,
-      number=13, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=95,
-  serialized_end=489,
+    name='OrderInformation',
+    full_name='Entities.Protobuf.Proto.OrderInformation',
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name='id', full_name='Entities.Protobuf.Proto.OrderInformation.id', index=0,
+            number=1, type=4, cpp_type=4, label=1,
+            has_default_value=False, default_value=0,
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='direction', full_name='Entities.Protobuf.Proto.OrderInformation.direction', index=1,
+            number=2, type=14, cpp_type=8, label=1,
+            has_default_value=False, default_value=0,
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='currency_pair_name', full_name='Entities.Protobuf.Proto.OrderInformation.currency_pair_name', index=2,
+            number=3, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=_b("").decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='init_currency_pair_value',
+            full_name='Entities.Protobuf.Proto.OrderInformation.init_currency_pair_value', index=3,
+            number=4, type=2, cpp_type=6, label=1,
+            has_default_value=False, default_value=float(0),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='init_volume', full_name='Entities.Protobuf.Proto.OrderInformation.init_volume', index=4,
+            number=5, type=2, cpp_type=6, label=1,
+            has_default_value=False, default_value=float(0),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='fill_currency_pair_value',
+            full_name='Entities.Protobuf.Proto.OrderInformation.fill_currency_pair_value', index=5,
+            number=6, type=2, cpp_type=6, label=1,
+            has_default_value=False, default_value=float(0),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='fill_volume', full_name='Entities.Protobuf.Proto.OrderInformation.fill_volume', index=6,
+            number=7, type=2, cpp_type=6, label=1,
+            has_default_value=False, default_value=float(0),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='timestamp_millis', full_name='Entities.Protobuf.Proto.OrderInformation.timestamp_millis', index=7,
+            number=8, type=3, cpp_type=2, label=1,
+            has_default_value=False, default_value=0,
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='status', full_name='Entities.Protobuf.Proto.OrderInformation.status', index=8,
+            number=9, type=14, cpp_type=8, label=1,
+            has_default_value=False, default_value=0,
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='tags', full_name='Entities.Protobuf.Proto.OrderInformation.tags', index=9,
+            number=10, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=_b("").decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='description', full_name='Entities.Protobuf.Proto.OrderInformation.description', index=10,
+            number=11, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=_b("").decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='zone', full_name='Entities.Protobuf.Proto.OrderInformation.zone', index=11,
+            number=12, type=14, cpp_type=8, label=1,
+            has_default_value=False, default_value=0,
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+        _descriptor.FieldDescriptor(
+            name='period', full_name='Entities.Protobuf.Proto.OrderInformation.period', index=12,
+            number=13, type=5, cpp_type=1, label=1,
+            has_default_value=False, default_value=0,
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR),
+    ],
+    extensions=[
+    ],
+    nested_types=[],
+    enum_types=[
+    ],
+    serialized_options=None,
+    is_extendable=False,
+    syntax='proto3',
+    extension_ranges=[],
+    oneofs=[
+    ],
+    serialized_start=95,
+    serialized_end=489,
 )
 
 _ORDERINFORMATION.fields_by_name['direction'].enum_type = Direction__pb2._DIRECTION
@@ -151,11 +151,10 @@ DESCRIPTOR.message_types_by_name['OrderInformation'] = _ORDERINFORMATION
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 OrderInformation = _reflection.GeneratedProtocolMessageType('OrderInformation', (_message.Message,), dict(
-  DESCRIPTOR = _ORDERINFORMATION,
-  __module__ = 'OrderInformation_pb2'
-  # @@protoc_insertion_point(class_scope:Entities.Protobuf.Proto.OrderInformation)
-  ))
+    DESCRIPTOR=_ORDERINFORMATION,
+    __module__='OrderInformation_pb2'
+    # @@protoc_insertion_point(class_scope:Entities.Protobuf.Proto.OrderInformation)
+))
 _sym_db.RegisterMessage(OrderInformation)
-
 
 # @@protoc_insertion_point(module_scope)

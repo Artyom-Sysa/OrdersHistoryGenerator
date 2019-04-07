@@ -11,10 +11,12 @@ from Enums.Direction import Direction
 from Enums.ExchangeType import ExchangeType
 from Enums.Status import Status
 from Enums.Zone import Zone
+from Enums.Zone_Int import Zone_Int
 from Generators.OrderHistoryMaker import OrderHistoryMaker
 from Service.DbService.Implementation.MySqlService import MySqlService
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import DefaultPythonLoggingService as Logger
 from Service.MessageBrokerService.Implementation.RmqService import RmqService
+from Entities.StatisticsDataStorage import StatisticsDataStorage
 
 
 class RmqConsumer:
@@ -24,8 +26,8 @@ class RmqConsumer:
         self.configs = Configuration()
         self.finish_event = finish_event
         self.consumed_data = []
-
         self.previous_time = 0
+        self.stop_messages_count = 0
 
     def consume(self):
         Logger.info(__file__, 'Configuration consumer...')
@@ -73,6 +75,7 @@ class RmqConsumer:
 
         Logger.info(__file__, 'Start consuming')
 
+        self.stop_messages_count = 0
         self.rmq.start_consuming()
 
     def configurate_db_service(self):
@@ -88,7 +91,7 @@ class RmqConsumer:
             self.mysql.open_connection()
 
             self.mysql.execute(
-                f'TRUNCATE `{self.configs.settings[Values.MYSQL_SECTION_NAME][Values.MYSQL_DB_NAME]}`.`History`')
+                f'TRUNCATE `{self.configs.settings[Values.MYSQL_SECTION_NAME][Values.MYSQL_DB_NAME]}`.`history`')
             Logger.info(__file__, 'Database service configurated')
 
         except AttributeError as er:
@@ -97,9 +100,12 @@ class RmqConsumer:
 
     def __msg_consumer(self, channel, method, header, body):
         if body == b'stop':
-            self.rmq.stop_consuming()
-            self.finish_event.set()
+            self.stop_messages_count += 1
+            if self.stop_messages_count == 3:
+                self.rmq.stop_consuming()
+                self.finish_event.set()
         else:
+            self.set_stat('Consumed messages', 1)
             order_record = Entities.Protobuf.OrderInformation_pb2.OrderInformation()
             order_record.ParseFromString(body)
 
@@ -107,7 +113,7 @@ class RmqConsumer:
 
             if len(self.consumed_data) == self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE]:
                 OrderHistoryMaker.add_time_statistic('Consuming data from RabbitMQ', (
-                            datetime.datetime.now() - self.previous_time).total_seconds() * 1000)
+                        datetime.datetime.now() - self.previous_time).total_seconds() * 1000)
                 Logger.info(__file__, "Batch size data consumed")
                 self.send_consumed_data_to_mysql()
                 self.previous_time = datetime.datetime.now()
@@ -115,7 +121,7 @@ class RmqConsumer:
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def send_consumed_data_to_mysql(self):
-        Logger.info(__file__,'Sending readed batch records to MySQL')
+        Logger.info(__file__, 'Sending readed batch records to MySQL')
         self.previous_time = datetime.datetime.now()
 
         self.mysql.execute_multiple(Values.MYSQL_INSERT_QUERY, self.consumed_data)
@@ -124,7 +130,6 @@ class RmqConsumer:
                                              (datetime.datetime.now() - self.previous_time).total_seconds() * 1000)
 
         self.consumed_data.clear()
-
 
     def to_data_list(self, proto_object):
         status = None
@@ -142,20 +147,18 @@ class RmqConsumer:
             status = Status.REJECTED
 
         if proto_object.zone == Entities.Protobuf.Status_pb2.STATUS_FILLED:
-            status = Status.FILLED
+            zone = Status.FILLED
         if proto_object.status == Entities.Protobuf.Status_pb2.STATUS_PARTIAL_FILLED:
-            status = Status.PARTIAL_FILLED
+            zone = Status.PARTIAL_FILLED
         if proto_object.status == Entities.Protobuf.Status_pb2.STATUS_REJECTED:
-            status = Status.REJECTED
+            zone = Status.REJECTED
 
         if proto_object.zone == Entities.Protobuf.Zone_pb2.RED:
-            zone = Zone.RED
-
+            zone = Zone_Int.RED
         if proto_object.zone == Entities.Protobuf.Zone_pb2.BLUE:
-            zone = Zone.BLUE
-
+            zone = Zone_Int.BLUE
         if proto_object.zone == Entities.Protobuf.Zone_pb2.GREEN:
-            zone = Zone.GREEN
+            zone = Zone_Int.GREEN
 
         self.consumed_data.append(
             [
@@ -174,3 +177,10 @@ class RmqConsumer:
                 proto_object.period
             ]
         )
+
+    def set_stat(self, name, value):
+        if name not in StatisticsDataStorage.statistics:
+            StatisticsDataStorage.statistics[name] = value
+        else:
+            StatisticsDataStorage.statistics[name] += value
+

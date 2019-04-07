@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class Direction(Enum):
-    BUY = 'Buy'
-    SELL = 'Sell'
+class Direction(IntEnum):
+    BUY = 1
+    SELL = 2

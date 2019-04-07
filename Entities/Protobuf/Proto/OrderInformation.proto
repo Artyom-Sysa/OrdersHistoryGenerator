@@ -11,9 +11,9 @@ message OrderInformation {
     Direction direction = 2;
     string currency_pair_name = 3;
     float init_currency_pair_value = 4;
-    int32 init_volume = 5;
+    float init_volume = 5;
     float fill_currency_pair_value = 6;
-    int32 fill_volume = 7;
+    float fill_volume = 7;
     int64 timestamp_millis = 8;
     Status status = 9;
     string tags = 10;

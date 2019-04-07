@@ -56,29 +56,78 @@ MySQL database schema creating script:
 Database name can be any, but do not forget to specify this name in configurations.
 
 ```sql
-CREATE DATABASE IF NOT EXISTS `OrdersHistory`;
+CREATE DATABASE IF NOT EXISTS `orders_history`;
 
-USE `OrdersHistory`;
+USE `orders_history`;
 
-DROP TABLE IF EXISTS `History`;
+DROP TABLE IF EXISTS `status`;
 
-CREATE TABLE `History` (
-  `pk_id` int NOT NULL AUTO_INCREMENT,
-  `record_id` bigint NOT NULL,
-  `direction` varchar(4) NOT NULL,
+CREATE TABLE `status` (
+  `status_id` int(11) NOT NULL AUTO_INCREMENT,
+  `status_name` varchar(15) NOT NULL,
+  PRIMARY KEY (`status_id`),
+  UNIQUE KEY `status_name_UNIQUE` (`status_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+
+LOCK TABLES `status` WRITE;
+INSERT INTO `status` VALUES (1,'New'),(2,'ToProvider'),(3,'Filled'),(4,'PartialFilled'),(5,'Rejected');
+UNLOCK TABLES;
+
+DROP TABLE IF EXISTS `zone`;
+
+CREATE TABLE `zone` (
+  `zone_id` int(11) NOT NULL AUTO_INCREMENT,
+  `zone_name` varchar(10) NOT NULL,
+  PRIMARY KEY (`zone_id`),
+  UNIQUE KEY `zone_name_UNIQUE` (`zone_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+
+LOCK TABLES `zone` WRITE;
+INSERT INTO `zone` VALUES (1,'Red'),(2,'Green'),(3,'Blue');
+UNLOCK TABLES;
+
+DROP TABLE IF EXISTS `direction`;
+
+CREATE TABLE `direction` (
+  `direction_id` int(11) NOT NULL AUTO_INCREMENT,
+  `direction_name` varchar(10) NOT NULL,
+  PRIMARY KEY (`direction_id`),
+  UNIQUE KEY `direction_name_UNIQUE` (`direction_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+
+LOCK TABLES `direction` WRITE;
+INSERT INTO `direction` VALUES (1,'Buy'),(2,'Sell');
+UNLOCK TABLES;
+
+
+DROP TABLE IF EXISTS `history`;
+CREATE TABLE `history` (
+  `pk_id` int(11) NOT NULL AUTO_INCREMENT,
+  `record_id` bigint(20) NOT NULL,
+  `direction_id` int(11) NOT NULL,
   `currency_pair` varchar(10) NOT NULL,
   `init_px` decimal(10,5) NOT NULL,
   `fill_px` decimal(10,5) NOT NULL,
-  `init_vol` int NOT NULL,
-  `fill_vol` int NOT NULL,
-  `status` varchar(13) NOT NULL,
-  `datetime` bigint NOT NULL,
+  `init_vol` decimal(20,8) NOT NULL,
+  `fill_vol` decimal(20,8) NOT NULL,
+  `status_id` int(11) NOT NULL,
+  `datetime` bigint(20) NOT NULL,
   `tags` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL,
-  `zone` varchar(5) NOT NULL,
-  PRIMARY KEY (`pk_id`),
-  UNIQUE KEY `id_UNIQUE` (`pk_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+  `zone_id` int(11) NOT NULL,
+  `period` int(11) NOT NULL,
+  PRIMARY KEY (`pk_id`,`record_id`),
+  UNIQUE KEY `id_UNIQUE` (`pk_id`),
+  KEY `fk_zone_idx` (`zone_id`),
+  KEY `fk_status_idx` (`status_id`),
+  KEY `fk_direction_idx` (`direction_id`),
+  CONSTRAINT `fk_direction` FOREIGN KEY (`direction_id`) REFERENCES `direction` (`direction_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_status` FOREIGN KEY (`status_id`) REFERENCES `status` (`status_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_zone` FOREIGN KEY (`zone_id`) REFERENCES `zone` (`zone_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+LOCK TABLES `history` WRITE;
+UNLOCK TABLES;
 
 
 ```
