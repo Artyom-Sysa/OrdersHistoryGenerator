@@ -42,27 +42,6 @@ class RmqConsumer:
                                            password=rmq_settings[Values.RMQ_PASSWORD]):
             self.rmq.reconfig()
 
-        self.rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
-
-        try:
-            self.rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                                      exchange_type=ExchangeType(rmq_settings[Values.RMQ_EXCHANGE_TYPE]))
-        except ValueError as er:
-            Logger.error(__file__, er.args)
-            Logger.info(__file__, 'Sending records to RabbitMQ aborted')
-            return
-
-        self.rmq.declare_queue(queue_name=Zone.RED.value)
-        self.rmq.declare_queue(queue_name=Zone.BLUE.value)
-        self.rmq.declare_queue(queue_name=Zone.GREEN.value)
-
-        self.rmq.queue_bind(Zone.RED.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                            rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY])
-        self.rmq.queue_bind(Zone.BLUE.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                            rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY])
-        self.rmq.queue_bind(Zone.GREEN.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                            rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY])
-
         self.rmq.consume(queue_name=Zone.RED.value, on_consume_callback=self.__msg_consumer)
         self.rmq.consume(queue_name=Zone.BLUE.value, on_consume_callback=self.__msg_consumer)
         self.rmq.consume(queue_name=Zone.GREEN.value, on_consume_callback=self.__msg_consumer)
@@ -183,4 +162,3 @@ class RmqConsumer:
             StatisticsDataStorage.statistics[name] = value
         else:
             StatisticsDataStorage.statistics[name] += value
-

@@ -13,18 +13,23 @@ class MySqlService(DbService):
 
         Logger.debug(__file__, 'Created mysql service')
 
-    def execute(self, query, *args, **kwargs):
+    def execute(self, query, select=False, multi=False, *args, **kwargs):
         try:
-            if not self.__connection.is_available():
-                self.__connection.open()
+            while True:
+                if not self.__connection.is_available():
+                    self.__connection.open()
 
-            cursor = self.__connection.get_cursor()
+                cursor = self.__connection.get_cursor()
 
-            if cursor is not None:
-                Logger.debug(__file__, 'Executing query:{}'.format(query))
-                cursor.execute(query)
+                if cursor is not None:
+                    Logger.debug(__file__, 'Executing query:{}'.format(query))
 
-                self.__connection.commit()
+                    cursor.execute(query, multi)
+                    if not select:
+                        if self.__connection.commit():
+                            break
+                    else:
+                        return cursor
         except mysql.connector.Error as err:
             Logger.error(__file__, err.msg)
 

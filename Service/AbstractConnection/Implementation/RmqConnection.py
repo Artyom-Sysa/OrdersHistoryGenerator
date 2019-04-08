@@ -38,14 +38,14 @@ class RmqConnection(AbstractConnection):
 
 
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def close(self, *args, **kwargs):
         try:
             if self.connection.is_open:
                 self.close()
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def is_available(self):
         try:
@@ -68,13 +68,13 @@ class RmqConnection(AbstractConnection):
                                                  durable=durable,
                                                  auto_delete=auto_delete)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def declare_queue(self, queue_name):
         try:
             return self.channel.queue_declare(queue=queue_name)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def queue_bind(self, queue_name, exchange_name, routing_key=None):
         self.exchanges_bindings[exchange_name].append(queue_name)
@@ -82,45 +82,45 @@ class RmqConnection(AbstractConnection):
         try:
             return self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def queue_unbind(self, queue_name, exchange_name, routing_key=None):
         try:
             return self.channel.queue_unbind(queue_name, exchange_name, routing_key=routing_key)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def queue_purge(self, queue_name):
         try:
             return self.channel.queue_purge(queue_name)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def queue_delete(self, queue_name, if_unused=False, if_empty=False):
         try:
             return self.channel.queue_delete(queue_name, if_unused=if_unused, if_empty=if_empty)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def exchange_delete(self, exchange_name=None, if_unused=False):
         try:
             return self.channel.exchange_delete(exchange=exchange_name, if_unused=if_unused)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def exchange_bind(self, destination, source, routing_key=''):
         try:
             return self.channel.exchange_bind(destination=destination, source=source,
                                               routing_key=routing_key)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def exchange_unbind(self, destination, source, routing_key=''):
         try:
             return self.channel.exchange_unbind(destination=destination, source=source,
                                                 routing_key=routing_key)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def publish(self, exchange_name, routing_key, body, properties=None, mandatory=False):
         fail = True
@@ -139,20 +139,20 @@ class RmqConnection(AbstractConnection):
         try:
             self.channel.basic_consume(queue=queue_name, on_message_callback=on_consume_callback)
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def start_consuming(self):
         try:
             self.channel.start_consuming()
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
             self.reconfig()
 
     def stop_consuming(self):
         try:
             self.channel.stop_consuming()
         except pika.exceptions.AMQPError as err:
-            Logger.error(__file__,err.args)
+            Logger.error(__file__, err.args)
 
     def reconfig(self):
         if self.open(user=self.__user,

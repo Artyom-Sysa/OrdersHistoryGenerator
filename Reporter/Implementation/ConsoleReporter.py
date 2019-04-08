@@ -31,8 +31,6 @@ class ConsoleReporter(Reporter):
                 print(item)
             print()
 
-
-
         print('========== REPORT END ==========')
         print()
         Logger.info(__file__, 'Reporting finished')

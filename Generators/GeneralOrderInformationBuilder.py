@@ -70,7 +70,7 @@ class GeneralOrderInformationBuilder:
         return self
 
     def set_init_volume(self, value):
-        self.__init_volume = float(value / 10**8)
+        self.__init_volume = float(value / 10 ** 8)
         return self
 
     def set_fill_volume_deviation_percent(self, value):

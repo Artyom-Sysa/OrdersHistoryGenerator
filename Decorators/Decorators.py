@@ -1,7 +1,3 @@
-import datetime
-import time
-
-
 def singleton(cls):
     instances = {}
 

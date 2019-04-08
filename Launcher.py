@@ -1,20 +1,17 @@
 import os
-import signal
-import time
+import threading
 
 from Config.ConfigLoader.ConfigLoader.Implementation.IniFileConfigLoader import IniFileConfigLoader
 from Config.Configurations import Configuration
 from Config.Configurations import ValuesNames as Values
+from Entities.RmqConsumer import RmqConsumer
 from Entities.StatisticsDataStorage import StatisticsDataStorage
 from Generators.OrderHistoryMaker import OrderHistoryMaker
 from Reporter.Implementation.ConsoleReporter import ConsoleReporter
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
     DefaultPythonLoggingService as Logger
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import LoggingLevel as Level
-
-from Entities.RmqConsumer import RmqConsumer
-
-import threading
+from Utils.Utils import Utils
 
 
 class Launcher:
@@ -45,35 +42,36 @@ class Launcher:
         self.history_maker = OrderHistoryMaker(self.generator_and_publisher_event)
         self.history_maker.prepare_configurations_for_generation()
 
-        self.consumer_thread = threading.Thread(target=self.f1)
-        self.generator_and_publisher_thread = threading.Thread(target=self.f2)
+        self.consumer_thread = threading.Thread(target=self.start_consumer)
+        self.generator_and_publisher_thread = threading.Thread(target=self.start_orders_history_generation)
 
         self.generator_and_publisher_thread.start()
         self.consumer_thread.start()
 
         while not self.generator_and_publisher_event.is_set() or not self.consumer_event.is_set():
             input()
-            if not self.generator_and_publisher_event.is_set() or not  self.consumer_event.is_set():
+            if not self.generator_and_publisher_event.is_set() or not self.consumer_event.is_set():
                 os.system('cls')
+                Utils.get_db_report_date()
                 ConsoleReporter.report(StatisticsDataStorage.statistics)
+        Logger.info(__file__, 'Program finished')
 
-        Logger.info(__file__, 'Order history generation finished')
-
-
-    def f1(self):
+    def start_consumer(self):
         self.consumer_event = threading.Event()
         consumer = RmqConsumer(self.consumer_event)
         consumer.consume()
 
-        if len(consumer.consumed_data)>0:
+        if len(consumer.consumed_data) > 0:
             consumer.send_consumed_data_to_mysql()
 
+        Utils.get_db_report_date()
         ConsoleReporter.report(StatisticsDataStorage.statistics)
 
         print('Press Enter to exit')
 
-    def f2(self):
+    def start_orders_history_generation(self):
         self.history_maker.execute_generation()
+        Logger.info(__file__, 'Order history generation finished')
 
 
 if __name__ == '__main__':
@@ -81,4 +79,3 @@ if __name__ == '__main__':
 
     launcher = Launcher()
     launcher.start()
-    Logger.info(__file__, 'Program finished')

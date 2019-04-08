@@ -187,3 +187,31 @@ class Utils:
         print(os.path.join(os.path.dirname(os.path.dirname(__file__)), path))
 
         return os.path.join(os.path.dirname(os.path.dirname(__file__)), path)
+
+    @staticmethod
+    def get_db_report_date():
+        from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
+            DefaultPythonLoggingService as Logger
+        from Config.Configurations import Configuration
+        from Config.Configurations import ValuesNames as Values
+        from Service.DbService.Implementation.MySqlService import MySqlService
+        from Entities.StatisticsDataStorage import StatisticsDataStorage
+
+        Logger.info(__file__, 'Getting statistic from db started')
+        mysql_settings = Configuration().settings[Values.MYSQL_SECTION_NAME]
+
+        mysql = MySqlService(user=mysql_settings[Values.MYSQL_USER],
+                             password=mysql_settings[Values.MYSQL_PASSWORD],
+                             host=mysql_settings[Values.MYSQL_HOST], port=mysql_settings[Values.MYSQL_PORT],
+                             database=mysql_settings[Values.MYSQL_DB_NAME])
+        try:
+            mysql.open_connection()
+
+            for (name, value) in mysql.execute(Values.MYSQL_GET_REPORT_QUERY, select=True):
+                StatisticsDataStorage.statistics[name] = value
+            Logger.info(__file__, 'Database service configurated')
+
+        except AttributeError as er:
+            Logger.error(__file__, er.args)
+            Logger.info(__file__, 'Sending records to MySQL aborted')
+        Logger.info(__file__, 'Getting statistic from db finished')

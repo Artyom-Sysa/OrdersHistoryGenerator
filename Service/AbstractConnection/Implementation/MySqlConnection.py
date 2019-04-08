@@ -70,7 +70,6 @@ class MySqlConnection(AbstractConnection):
             self.rollback()
             return False
 
-
     def rollback(self):
         try:
             self.__conn.rollback()

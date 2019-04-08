@@ -1,9 +1,8 @@
 import os
 
 from Decorators.Decorators import singleton
-from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
-from Utils.Utils import Utils
 from Enums.ExchangeType import ExchangeType
+from Enums.LinearCongruentialGeneratorParameters import LinearCongruentialGeneratorParameters as LCGParams
 
 
 @singleton
@@ -288,7 +287,29 @@ class ValuesNames:
     RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY = 'rabbitmq_blue_records_routing_key'
     RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY = 'rabbitmq_gree_records_routing_key'
 
-    MYSQL_INSERT_QUERY = 'INSERT INTO `orders_history`.`history`(`record_id`, `direction_id`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status_id`, `datetime`, `tags`, `description`, `zone_id`, `period`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
+    MYSQL_INSERT_QUERY = 'INSERT INTO `orders_history`.`history`(`order_id`, `direction_id`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status_id`, `datetime`, `tags`, `description`, `zone_id`, `period`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
+
+    MYSQL_GET_REPORT_QUERY = """
+        SELECT 
+            CONCAT(zone.zone_name, ' zone avg order amount') as 'name',
+            SUM(sub_table.amount) / (
+                SELECT COUNT(DISTINCT period) FROM history
+            ) as 'value'
+        FROM 
+            (
+            SELECT 
+                    zone_id, 
+                    COUNT(DISTINCT order_id) amount 
+                FROM 
+                    history
+                GROUP BY zone_id, period
+            ) sub_table JOIN zone ON sub_table.zone_id=zone.zone_id
+        GROUP BY sub_table.zone_id
+        UNION
+            SELECT 'Total orders in database', count(DISTINCT order_id) FROM history
+        UNION
+            SELECT 'Total records in database', count(*) FROM history
+    """
 
     MYSQL_SECTION_NAME = 'MYSQL'
     MYSQL_HOST = 'mysql_host'

@@ -53,40 +53,6 @@ class OrderHistoryMaker:
 
         self.history.clear_history()
 
-        rmq_settings = self.configs.settings[Values.RMQ_SECTION_NAME]
-
-        self.rmq = RmqService()
-
-        while not self.rmq.open_connection(host=rmq_settings[Values.RMQ_HOST], port=rmq_settings[Values.RMQ_PORT],
-                                           virtual_host=rmq_settings[Values.RMQ_VIRTUAL_HOST],
-                                           user=rmq_settings[Values.RMQ_USER],
-                                           password=rmq_settings[Values.RMQ_PASSWORD]):
-            self.rmq.reconfig()
-
-        self.rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
-
-        try:
-            self.rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                                      exchange_type=ExchangeType(rmq_settings[Values.RMQ_EXCHANGE_TYPE]))
-        except ValueError as er:
-            Logger.error(__file__, er.args)
-            Logger.info(__file__, 'Sending records to RabbitMQ aborted')
-            return
-
-        self.rmq.declare_queue(queue_name=Zone.RED.value)
-        self.rmq.declare_queue(queue_name=Zone.BLUE.value)
-        self.rmq.declare_queue(queue_name=Zone.GREEN.value)
-
-        self.rmq.queue_bind(Zone.RED.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                            rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY])
-        self.rmq.queue_bind(Zone.BLUE.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                            rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY])
-        self.rmq.queue_bind(Zone.GREEN.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
-                            rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY])
-
-        self.rmq.queue_purge(queue_name=Zone.RED.value)
-        self.rmq.queue_purge(queue_name=Zone.BLUE.value)
-        self.rmq.queue_purge(queue_name=Zone.GREEN.value)
 
         Logger.info(__file__, 'Generating order history started')
 
@@ -445,6 +411,8 @@ class OrderHistoryMaker:
         self.__calculate_first_generation_period_start_date()
         self.__calculate_avg_values_of_id()
         self.__register_lcg_generators()
+        self.init_rmq()
+
 
         Logger.info(__file__, "Execute preparing finished")
 
@@ -562,3 +530,39 @@ class OrderHistoryMaker:
                                 (datetime.datetime.now() - previous_time).total_seconds() * 1000)
 
         self.history.clear_history()
+
+    def init_rmq(self):
+        rmq_settings = self.configs.settings[Values.RMQ_SECTION_NAME]
+
+        self.rmq = RmqService()
+
+        while not self.rmq.open_connection(host=rmq_settings[Values.RMQ_HOST], port=rmq_settings[Values.RMQ_PORT],
+                                           virtual_host=rmq_settings[Values.RMQ_VIRTUAL_HOST],
+                                           user=rmq_settings[Values.RMQ_USER],
+                                           password=rmq_settings[Values.RMQ_PASSWORD]):
+            self.rmq.reconfig()
+
+        self.rmq.exchange_delete(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME])
+
+        try:
+            self.rmq.declare_exchange(exchange_name=rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                                      exchange_type=ExchangeType(rmq_settings[Values.RMQ_EXCHANGE_TYPE]))
+        except ValueError as er:
+            Logger.error(__file__, er.args)
+            Logger.info(__file__, 'Sending records to RabbitMQ aborted')
+            return
+
+        self.rmq.declare_queue(queue_name=Zone.RED.value)
+        self.rmq.declare_queue(queue_name=Zone.BLUE.value)
+        self.rmq.declare_queue(queue_name=Zone.GREEN.value)
+
+        self.rmq.queue_bind(Zone.RED.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                            rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY])
+        self.rmq.queue_bind(Zone.BLUE.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                            rmq_settings[Values.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY])
+        self.rmq.queue_bind(Zone.GREEN.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
+                            rmq_settings[Values.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY])
+
+        self.rmq.queue_purge(queue_name=Zone.RED.value)
+        self.rmq.queue_purge(queue_name=Zone.BLUE.value)
+        self.rmq.queue_purge(queue_name=Zone.GREEN.value)
