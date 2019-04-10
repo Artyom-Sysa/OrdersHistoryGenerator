@@ -297,7 +297,7 @@ class ValuesNames:
             ) as 'value'
         FROM 
             (
-            SELECT 
+                SELECT 
                     zone_id, 
                     COUNT(DISTINCT order_id) amount 
                 FROM 
