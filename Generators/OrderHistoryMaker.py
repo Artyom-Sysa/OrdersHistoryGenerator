@@ -1,4 +1,6 @@
 import datetime
+import pprint
+import random
 import re
 
 import Entities.Protobuf.Direction_pb2
@@ -53,11 +55,9 @@ class OrderHistoryMaker:
 
         self.history.clear_history()
 
-
         Logger.info(__file__, 'Generating order history started')
 
-        self.__generate_green_orders()
-        self.__generate_red_blue_orders()
+        self.__generate_orders()
 
         Logger.info(__file__, 'Generating order history finished')
 
@@ -78,25 +78,14 @@ class OrderHistoryMaker:
 
         self.fininsh_event.set()
 
-    def __get_order_in_green_zone(self, id, status_sequence, period):
+    def __get_order_in_zone(self, id, status_sequence, period, zone, statuses_in_unfinished_zone):
         '''
         Generate GeneralOrderHistory for green zone
         :param period: period index for generation
         :return: GeneralOrderHistory instance for green zone period
         '''
 
-        return self.records_builder.build_order_records_in_green_zone(id, status_sequence, period)
-
-    def __get_order_in_blue_red_zone(self, id, status_sequence, statuses_in_blue_zone_, period_start, period_end):
-        '''
-        Generate GeneralOrderHistory for blue-red zone
-        :param period_start: index of start order period
-        :param period_end: index of finish order period
-        :return: GeneralOrderHistory instance for blue-red zone period
-        '''
-
-        return self.records_builder.build_order_records_in_blue_red_zone(id, status_sequence, statuses_in_blue_zone_,
-                                                                         period_start, period_end)
+        return self.records_builder.build_order_zone(id, status_sequence, period, zone, statuses_in_unfinished_zone)
 
     def __generate_general_order_information(self):
         '''
@@ -121,123 +110,35 @@ class OrderHistoryMaker:
                                       LCG.get_next(Values.TAGS_GENERATOR_5)). \
             build()
 
-    def __generate_green_orders(self):
+    def __generate_orders(self):
         '''
         Generate green zone orders records with generators configurations
         '''
 
         Logger.info(__file__, 'Started generation order history in green zone')
 
-        total_green_volume = int(self.__count_volume_by_color(Values.GREEN_ZONE_VOLUME)) - 1
-        period = 1
-        period_limit = self.configs.orders_volumes_for_generation[period][Values.GREEN_ZONE_VOLUME]
-        period_counter = 0
-
         previous_time = datetime.datetime.now()
+        t = 0
+        for period in range(len(self.configs.orders_volumes_for_generation)):
+            zone_index = 0
+            for zone in self.configs.orders_volumes_for_generation[period]:
+                for i in range(int(self.configs.orders_volumes_for_generation[period][zone])):
+                    order = self.__generate_general_order_information()
 
-        for i in range(total_green_volume + 1):
-            Logger.debug(__file__, f'Generation {i + 1} green order history started')
+                    self.history.orders[order.id] = order
+                    records = self.__get_order_in_zone(order.id, order.status_sequence, period, zone,
+                                                       order.statuses_in_blue_zone)
+                    self.history.records.extend(records)
+                    self.inc_statistic('Generated orders', 1)
+                    self.inc_statistic('Generated records', len(records))
 
-            if period_counter <= period_limit:
-                period_counter += 1
-            else:
-                period_counter = 0
-                period += 1
-                period_limit = self.configs.orders_volumes_for_generation[period - 1][Values.GREEN_ZONE_VOLUME]
-
-            order = self.__generate_general_order_information()
-
-            self.history.orders[order.id] = order
-            records = self.__get_order_in_green_zone(order.id, order.status_sequence, period)
-            self.history.records.extend(records)
-
-            self.inc_statistic('Generated orders', 1)
-            self.inc_statistic('Generated records', len(records))
-
-            if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
-                self.add_time_statistic('Order history generation',
-                                        (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-                self.send_to_rmq()
-                previous_time = datetime.datetime.now()
-
-            Logger.debug(__file__, f'Generation {i + 1} green order history finished')
-        Logger.info(__file__, 'Generation green zone orders history finished')
-
-    def __generate_red_blue_orders(self):
-        '''
-        Generate blue-red zone orders records with generators configurations
-        '''
-
-        Logger.info(__file__, 'Started generation order history in blue-red zone')
-
-        period_start = -1
-        period_finish = 0
-        period_start_limit = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_IN_FIRST_BLUE_ZONE]
-        period_start_counter = 1
-        period_finish_limit = self.configs.orders_volumes_for_generation[period_finish][Values.RED_ZONE_VOLUME]
-        period_finish_counter = 1
-        finished_counter = 1
-        finished_limit = self.__count_volume_by_color(Values.RED_ZONE_VOLUME)
-        total_orders_amount = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_AMOUNT]
-
-        total_green_volume = int(self.__count_volume_by_color(Values.GREEN_ZONE_VOLUME)) - 1
-
-        previous_time = datetime.datetime.now()
-
-        for i in range(total_green_volume + 1, total_orders_amount):
-            Logger.debug(__file__, f'Started generation {i - total_green_volume} order history in blue-red zone')
-
-            order = self.__generate_general_order_information()
-            self.history.orders[order.id] = order
-            records = self.__get_order_in_blue_red_zone(order.id,
-                                                        order.status_sequence,
-                                                        order.statuses_in_blue_zone,
-                                                        period_start,
-                                                        period_finish)
-            self.history.records.extend(records)
-            self.inc_statistic('Generated orders', 1)
-            self.inc_statistic('Generated records', len(records))
-
-            if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] == 0:
-                self.add_time_statistic('Order history generation',
-                                        (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-                self.send_to_rmq()
-                previous_time = datetime.datetime.now()
-
-            Logger.debug(__file__, f'Generation {i - total_green_volume} order history in blue-red zone finished')
-
-            if period_start_counter < period_start_limit:
-                period_start_counter += 1
-            else:
-                period_start += 1
-                period_start_limit = self.configs.orders_volumes_for_generation[period_start][Values.BLUE_ZONE_VOLUME] \
-                    if period_start < len(self.configs.orders_volumes_for_generation) \
-                    else self.configs.not_used_orders_amount
-
-                if period_start == len(self.configs.orders_volumes_for_generation):
-                    period_start = 0
-
-                period_start_counter = 1
-
-            if finished_counter < finished_limit:
-                finished_counter += 1
-
-                if period_finish_counter < period_finish_limit:
-                    period_finish_counter += 1
-                else:
-                    period_finish += 1
-                    period_finish_limit = self.configs.orders_volumes_for_generation[period_finish][
-                        Values.RED_ZONE_VOLUME]
-                    period_finish_counter = 1
-            else:
-                period_finish = -1
-
-        Logger.info(__file__, 'Generation blue-red zone orders history finished')
-
-        if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE] != 0:
-            self.add_time_statistic('Order history generation',
-                                    (datetime.datetime.now() - previous_time).total_seconds() * 1000)
-            self.send_to_rmq()
+                    if len(self.history.orders) % self.configs.settings[Values.GENERAL_SECTION_NAME][
+                        Values.BATCH_SIZE] == 0:
+                        self.add_time_statistic('Order history generation',
+                                                (datetime.datetime.now() - previous_time).total_seconds() * 1000)
+                        self.send_to_rmq()
+                        previous_time = datetime.datetime.now()
+                zone_index += 1
 
     def __load_currency_pairs_from_file(self):
         '''
@@ -324,15 +225,15 @@ class OrderHistoryMaker:
             third_percent = Utils.calculate_percent_from_value(i, blue_zone_percent)
 
             if Utils.is_int(first_percent) and Utils.is_int(second_percent) and Utils.is_int(third_percent):
-                self.configs.orders_volumes.append({
-                    Values.TOTAL_ORDERS_VOLUME: i,
+                self.configs.min_orders_volumes = {
                     Values.RED_ZONE_VOLUME: first_percent,
                     Values.GREEN_ZONE_VOLUME: second_percent,
                     Values.BLUE_ZONE_VOLUME: third_percent
-                })
+                }
+                break
 
-        Logger.info(__file__, 'Calculating of orders volumes to period with zones percentes finished')
-        Logger.debug(__file__, 'Calculated orders volumes: {}'.format(self.configs.orders_volumes))
+        # Logger.info(__file__, 'Calculating of orders volumes to period with zones percentes finished')
+        # Logger.debug(__file__, 'Calculated orders volumes: {}'.format(self.configs.orders_volumes))
 
     def __calculate_orders_volumes_for_generations(self):
         '''
@@ -343,34 +244,27 @@ class OrderHistoryMaker:
             self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_AMOUNT]
         ))
 
-        in_blue_zone = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_IN_FIRST_BLUE_ZONE]
-        not_used = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_AMOUNT] - in_blue_zone
+        min_percentage_amount = int(
+            self.configs.settings[Values.GENERAL_SECTION_NAME][Values.ORDERS_AMOUNT] /
+            sum(self.configs.min_orders_volumes.values()))
 
-        found = True
-        limit = len(self.configs.orders_volumes) - 1
+        multiplier = LCG.get_next(Values.PERIODS_SIZE_GENERATOR)
 
-        while found:
-            i = limit
-            found_volume = False
+        while min_percentage_amount > multiplier:
+            self.configs.orders_volumes_for_generation.append({
+                Zone.RED: self.configs.min_orders_volumes[Values.RED_ZONE_VOLUME] * multiplier,
+                Zone.GREEN: self.configs.min_orders_volumes[Values.GREEN_ZONE_VOLUME] * multiplier,
+                Zone.BLUE: self.configs.min_orders_volumes[Values.BLUE_ZONE_VOLUME] * multiplier
+            })
 
-            while i >= 0 and not found_volume:
-                volume = self.configs.orders_volumes[i]
-                needed_orders = volume[Values.BLUE_ZONE_VOLUME] + volume[Values.GREEN_ZONE_VOLUME]
-
-                if not_used > 0 and needed_orders <= not_used and volume[Values.RED_ZONE_VOLUME] <= in_blue_zone:
-                    in_blue_zone = in_blue_zone - volume[Values.RED_ZONE_VOLUME] + volume[Values.BLUE_ZONE_VOLUME]
-
-                    self.configs.orders_volumes_for_generation.append(volume)
-
-                    not_used -= needed_orders
-                    found_volume = True
-                else:
-                    i -= 1
-
-            if i < 0 and not found_volume:
-                found = False
-
-        self.configs.not_used_orders_amount = not_used + in_blue_zone
+            min_percentage_amount -= multiplier
+            multiplier = LCG.get_next(Values.PERIODS_SIZE_GENERATOR)
+        if min_percentage_amount > 0:
+            self.configs.orders_volumes_for_generation.append({
+                Zone.RED: self.configs.min_orders_volumes[Values.RED_ZONE_VOLUME] * min_percentage_amount,
+                Zone.GREEN: self.configs.min_orders_volumes[Values.GREEN_ZONE_VOLUME] * min_percentage_amount,
+                Zone.BLUE: self.configs.min_orders_volumes[Values.BLUE_ZONE_VOLUME] * min_percentage_amount
+            })
 
         Logger.info(__file__, "Calculating orders volumes for each period finished")
         Logger.debug(__file__, 'Calculated {} orders volumes for generations: {}'.format(
@@ -388,7 +282,6 @@ class OrderHistoryMaker:
         day_of_week = current_date.weekday() + 1
 
         self.configs.is_current_date_in_trading_period = day_of_week in (1, 2, 5)
-
         days_to_last_period = day_of_week + 7 - 5 if day_of_week < 5 else day_of_week - 5
         days_to_start_period = days_to_last_period + (7 * (len(self.configs.orders_volumes_for_generation)))
         self.configs.start_date = current_date + datetime.timedelta(days=-days_to_start_period)
@@ -406,13 +299,13 @@ class OrderHistoryMaker:
 
         self.__load_currency_pairs_from_file()
         self.__load_tags_from_file()
+        self.__register_lcg_generators()
+
         self.__calculate_orders_period_volumes()
         self.__calculate_orders_volumes_for_generations()
         self.__calculate_first_generation_period_start_date()
         self.__calculate_avg_values_of_id()
-        self.__register_lcg_generators()
         self.init_rmq()
-
 
         Logger.info(__file__, "Execute preparing finished")
 

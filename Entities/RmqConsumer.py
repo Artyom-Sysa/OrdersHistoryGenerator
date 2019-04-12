@@ -90,7 +90,7 @@ class RmqConsumer:
 
             self.to_data_list(order_record)
 
-            if len(self.consumed_data) == self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE]:
+            if len(self.consumed_data) >= self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE]:
                 OrderHistoryMaker.add_time_statistic('Consuming data from RabbitMQ', (
                         datetime.datetime.now() - self.previous_time).total_seconds() * 1000)
                 Logger.info(__file__, "Batch size data consumed")
@@ -112,7 +112,6 @@ class RmqConsumer:
 
     def to_data_list(self, proto_object):
         status = None
-        zone = None
 
         if proto_object.status == Entities.Protobuf.Status_pb2.STATUS_NEW:
             status = Status.NEW
@@ -124,20 +123,6 @@ class RmqConsumer:
             status = Status.PARTIAL_FILLED
         if proto_object.status == Entities.Protobuf.Status_pb2.STATUS_REJECTED:
             status = Status.REJECTED
-
-        if proto_object.zone == Entities.Protobuf.Status_pb2.STATUS_FILLED:
-            zone = Status.FILLED
-        if proto_object.status == Entities.Protobuf.Status_pb2.STATUS_PARTIAL_FILLED:
-            zone = Status.PARTIAL_FILLED
-        if proto_object.status == Entities.Protobuf.Status_pb2.STATUS_REJECTED:
-            zone = Status.REJECTED
-
-        if proto_object.zone == Entities.Protobuf.Zone_pb2.RED:
-            zone = Zone_Int.RED
-        if proto_object.zone == Entities.Protobuf.Zone_pb2.BLUE:
-            zone = Zone_Int.BLUE
-        if proto_object.zone == Entities.Protobuf.Zone_pb2.GREEN:
-            zone = Zone_Int.GREEN
 
         self.consumed_data.append(
             [
@@ -152,8 +137,6 @@ class RmqConsumer:
                 proto_object.timestamp_millis,
                 proto_object.tags,
                 proto_object.description,
-                zone.value,
-                proto_object.period
             ]
         )
 

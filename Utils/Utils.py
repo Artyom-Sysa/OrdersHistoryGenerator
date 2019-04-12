@@ -188,8 +188,8 @@ class Utils:
 
         return os.path.join(os.path.dirname(os.path.dirname(__file__)), path)
 
-    @staticmethod
-    def get_db_report_date():
+    @classmethod
+    def get_db_report_date(cls):
         from Service.LoggerService.Implementation.DefaultPythonLoggingService import \
             DefaultPythonLoggingService as Logger
         from Config.Configurations import Configuration
@@ -207,7 +207,14 @@ class Utils:
         try:
             mysql.open_connection()
 
-            for (name, value) in mysql.execute(Values.MYSQL_GET_REPORT_QUERY, select=True):
+            for (value, name) in mysql.execute(Values.MYSQL_GET_REPORT_QUERY, select=True):
+                if name == '1':
+                    name = 'Red zone orders avg amount'
+                if name == '2':
+                    name = 'Green zone orders avg amount'
+                if name == '3':
+                    name = 'Blue zone orders avg amount'
+
                 StatisticsDataStorage.statistics[name] = value
             Logger.info(__file__, 'Database service configurated')
 

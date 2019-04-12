@@ -30,7 +30,7 @@ class OrderRecordsBuilder:
                          'Set general order info parameter to {}'.format(self.__order_general_information.__str__()))
         return self
 
-    def build_order_records_in_green_zone(self, id, status_sequence, period_index):
+    def build_order_zone(self, id, status_sequence, period_index, zone, statuses_in_unfinished_zone):
         Logger.debug(__file__, 'Called building order in green zone')
 
         period_start = self.__configs.start_date + datetime.timedelta(days=period_index * 7)
@@ -53,63 +53,29 @@ class OrderRecordsBuilder:
                      f'Generated times for records: {first_status_time}, {second_status_time}, {third_status_time}')
 
         Logger.debug(__file__, 'Building order records in green zone finished')
-        return [
+
+        records = [
             OrderStatusChangingInfo(id, self.__generate_ms_datetime(first_status_date, first_status_time), Status.NEW,
-                                    Zone.GREEN, period_index),
+                                    zone, period_index),
             OrderStatusChangingInfo(id, self.__generate_ms_datetime(second_status_date, second_status_time),
-                                    Status.TO_PROVIDER, Zone.GREEN, period_index),
+                                    Status.TO_PROVIDER, zone, period_index),
             OrderStatusChangingInfo(id, self.__generate_ms_datetime(third_status_date, third_status_time),
                                     self.__get_last_status(status_sequence),
-                                    Zone.GREEN, period_index)
+                                    zone, period_index)
         ]
 
-    def build_order_records_in_blue_red_zone(self, id, status_sequence, statuses_in_blue_zone_, period_start,
-                                             period_end):
-        Logger.debug(__file__, 'Called building order in blue-red zone')
-
-        first_status_date, second_status_date, third_status_date = \
-            self.__calculate_red_blue_zone_order_dates(statuses_in_blue_zone_, period_start, period_end)
-
-        Logger.debug(__file__,
-                     f'Generated dates for records: {first_status_date}, {second_status_date}, {third_status_date}')
-
-        first_status_time, second_status_time, third_status_time = self.__calculate_order_statuses_times(
-            first_status_date,
-            second_status_date,
-            third_status_date)
-
-        Logger.debug(__file__,
-                     f'Generated times for records: {first_status_time}, {second_status_time}, {third_status_time}')
-
-        records = []
-
-        if first_status_date != 0:
-            records.append(
-                OrderStatusChangingInfo(id,
-                                        self.__generate_ms_datetime(first_status_date, first_status_time),
-                                        Status.NEW, Zone.BLUE, period_start)
-            )
-
-        if second_status_date != 0:
-            records.append(
-                OrderStatusChangingInfo(id,
-                                        self.__generate_ms_datetime(second_status_date, second_status_time),
-                                        Status.TO_PROVIDER,
-                                        Zone.BLUE if statuses_in_blue_zone_ == 2 else Zone.RED,
-                                        period_start if statuses_in_blue_zone_ == 2 else period_end)
-            )
-
-        if third_status_date != 0:
-            records.append(
-                OrderStatusChangingInfo(id,
-                                        self.__generate_ms_datetime(third_status_date, third_status_time),
-                                        self.__get_last_status(status_sequence),
-                                        Zone.RED, period_end)
-            )
-
-        Logger.debug(__file__, 'Building order records in blue-red zone finished')
-
-        return records
+        if zone == Zone.GREEN:
+            return records
+        elif zone == Zone.BLUE:
+            if statuses_in_unfinished_zone == 1:
+                return [records[0]]
+            else:
+                return [records[0], records[1]]
+        else:
+            if statuses_in_unfinished_zone == 1:
+                return [records[2]]
+            else:
+                return [records[1], records[2]]
 
     def __calculate_date(self, offset, previous_date):
         previous_date_day_of_week = previous_date.weekday() + 1

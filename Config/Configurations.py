@@ -34,7 +34,7 @@ class Configuration:
                 ValuesNames.MYSQL_PORT: '3306',
                 ValuesNames.MYSQL_USER: 'root',
                 ValuesNames.MYSQL_PASSWORD: '',
-                ValuesNames.MYSQL_DB_NAME: 'OrdersHistory'
+                ValuesNames.MYSQL_DB_NAME: 'orders_history'
             },
             ValuesNames.RMQ_SECTION_NAME: {
                 ValuesNames.RMQ_HOST: '127.0.0.1',
@@ -48,6 +48,13 @@ class Configuration:
                 ValuesNames.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY: 'r.order.blue-zone.order-history-generator',
                 ValuesNames.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY: 'r.order.green-zone.order-history-generator',
             },
+            ValuesNames.PERIODS_SIZE_GENERATOR: {
+                LCGParams.SEED.value: 5,
+                LCGParams.MULTIPLIER.value: 3,
+                LCGParams.MODULUS.value: 10,
+                LCGParams.INCREMENT.value: 8
+            },
+
             ValuesNames.ID_GENERATOR: {
                 ValuesNames.MWC1616_X: 23,
                 ValuesNames.MWC1616_Y: 2,
@@ -94,7 +101,7 @@ class Configuration:
             ValuesNames.INIT_VOLUME_GENERATOR: {
                 LCGParams.SEED.value: 666,
                 LCGParams.MULTIPLIER.value: 84589,
-                LCGParams.MODULUS.value: 5000,
+                LCGParams.MODULUS.value: 500000000000,
                 LCGParams.INCREMENT.value: 45989
             },
             ValuesNames.PARTIAL_FILLED_PERCENT_GENERATOR: {
@@ -170,7 +177,7 @@ class Configuration:
 
         self.currency_pairs = []
         self.tags = []
-        self.orders_volumes = []
+        self.min_orders_volumes = None
         self.orders_volumes_for_generation = []
         self.not_used_orders_amount = 0
         self.is_current_date_in_trading_period = False
@@ -255,6 +262,8 @@ class ValuesNames:
     SECOND_STATUS_POSSIBLE_TIME_GENERATOR = "SECOND_STATUS_POSSIBLE_TIME_GENERATOR"
     THIRD_STATUS_POSSIBLE_TIME_GENERATOR = "THIRD_STATUS_POSSIBLE_TIME_GENERATOR"
 
+    PERIODS_SIZE_GENERATOR = "PERIODS_SIZE_GENERATOR"
+
     CURRENCY_PAIR_NAME = "currency pair name"
     CURRENCY_PAIR_VALUE = "currency pair value"
 
@@ -287,28 +296,58 @@ class ValuesNames:
     RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY = 'rabbitmq_blue_records_routing_key'
     RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY = 'rabbitmq_gree_records_routing_key'
 
-    MYSQL_INSERT_QUERY = 'INSERT INTO `orders_history`.`history`(`order_id`, `direction_id`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status_id`, `datetime`, `tags`, `description`, `zone_id`, `period`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
+    MYSQL_INSERT_QUERY = 'INSERT INTO `orders_history`.`history`(`order_id`, `direction_id`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status_id`, `datetime`, `tags`, `description`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
 
     MYSQL_GET_REPORT_QUERY = """
         SELECT 
-            CONCAT(zone.zone_name, ' zone avg order amount') as 'name',
-            SUM(sub_table.amount) / (
-                SELECT COUNT(DISTINCT period) FROM history
-            ) as 'value'
-        FROM 
             (
-            SELECT 
-                    zone_id, 
-                    COUNT(DISTINCT order_id) amount 
+                COUNT(order_id) / 
+                (
+                    SELECT 
+                        CEIL(ABS((MIN(`datetime`) - MAX(`datetime`)) DIV 86400000) / 7) 
+                    FROM 
+                        history
+                )
+            ) AS avg_value, 
+            IF(
+                (
+                    SELECT 
+                        COUNT(order_id) 
+                    FROM 
+                        history inner_h 
+                    WHERE 
+                        inner_h.order_id = h.order_id
+                ) = 3, 2, 
+                            IF(
+                                (
+                                    SELECT 
+                                        COUNT(order_id) 
+                                    FROM 
+                                        history inner_h 
+                                    WHERE 
+                                        inner_h.order_id = h.order_id AND status_id = 1
+                                ) = 1, 3, 1
+                            )
+            ) AS zone_id 
+        FROM (
+                SELECT
+                    DISTINCT order_id 
                 FROM 
                     history
-                GROUP BY zone_id, period
-            ) sub_table JOIN zone ON sub_table.zone_id=zone.zone_id
-        GROUP BY sub_table.zone_id
+            ) h 
+        GROUP BY zone_id
         UNION
-            SELECT 'Total orders in database', count(DISTINCT order_id) FROM history
+            SELECT 
+                COUNT(DISTINCT order_id), 
+                'Total orders in database' 
+            FROM 
+                history
         UNION
-            SELECT 'Total records in database', count(*) FROM history
+            SELECT 
+                COUNT(*), 
+                'Total records in database' 
+            FROM 
+            history
     """
 
     MYSQL_SECTION_NAME = 'MYSQL'
