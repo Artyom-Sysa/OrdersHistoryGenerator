@@ -33,7 +33,7 @@ class RmqService(MessabeBrokerService):
             virtual_host = kwargs['virtual_host']
         else:
             virtual_host = pika.connection.Parameters.DEFAULT_VIRTUAL_HOST
-
+        
         try:
             self.conn.open(host=host, port=port, user=user, password=password, virtual_host=virtual_host)
             return self.conn.is_available()

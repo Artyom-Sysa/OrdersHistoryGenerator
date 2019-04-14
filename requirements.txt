@@ -1,3 +1,4 @@
+supertools
 pika==1.0.0
 protobuf==3.7.1
 mysql-connector==2.2.9

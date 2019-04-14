@@ -33,7 +33,7 @@ class Configuration:
                 ValuesNames.MYSQL_HOST: '127.0.0.1',
                 ValuesNames.MYSQL_PORT: '3306',
                 ValuesNames.MYSQL_USER: 'root',
-                ValuesNames.MYSQL_PASSWORD: '',
+                ValuesNames.MYSQL_PASSWORD: 'root',
                 ValuesNames.MYSQL_DB_NAME: 'orders_history'
             },
             ValuesNames.RMQ_SECTION_NAME: {
