@@ -1,5 +1,7 @@
+import datetime
 import os
 import threading
+import time
 
 from Config.ConfigLoader.ConfigLoader.Implementation.IniFileConfigLoader import IniFileConfigLoader
 from Config.Configurations import Configuration
@@ -23,6 +25,8 @@ class Launcher:
         self.consumer_thread = None
         self.generator_and_publisher_event = None
         self.consumer_event = None
+        self.report_thread = None
+
 
     def __load_configs(self):
         Logger.add_to_journal(__file__, Level.INFO, 'Started load configuration')
@@ -48,12 +52,13 @@ class Launcher:
         self.generator_and_publisher_thread.start()
         self.consumer_thread.start()
 
+        sec = self.configs.settings[Values.GENERAL_SECTION_NAME][Values.REPORTER_DELAY]
         while not self.generator_and_publisher_event.is_set() or not self.consumer_event.is_set():
-            input()
-            if not self.generator_and_publisher_event.is_set() or not self.consumer_event.is_set():
-                os.system('cls')
-                Utils.get_db_report_date()
-                ConsoleReporter.report(StatisticsDataStorage.statistics)
+            time.sleep(sec)
+            self.report()
+        self.report()
+
+
         Logger.info(__file__, 'Program finished')
 
     def start_consumer(self):
@@ -64,10 +69,15 @@ class Launcher:
         if len(consumer.consumed_data) > 0:
             consumer.send_consumed_data_to_mysql()
 
+
+
+    def report(self):
+        Logger.info(__file__, 'Start reporting')
+        print('Start getting reporting data at {}'.format(datetime.datetime.now()))
         Utils.get_db_report_date()
         ConsoleReporter.report(StatisticsDataStorage.statistics)
-
-        print('Press Enter to exit')
+        print('Reporter finished data at {}'.format(datetime.datetime.now()))
+        Logger.info(__file__, 'Reporting finished')
 
     def start_orders_history_generation(self):
         self.history_maker.execute_generation()

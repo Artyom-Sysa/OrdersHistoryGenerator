@@ -445,9 +445,11 @@ class OrderHistoryMaker:
             Logger.info(__file__, 'Sending records to RabbitMQ aborted')
             return
 
-        self.rmq.declare_queue(queue_name=Zone.RED.value)
-        self.rmq.declare_queue(queue_name=Zone.BLUE.value)
-        self.rmq.declare_queue(queue_name=Zone.GREEN.value)
+
+        self.rmq.declare_queue(queue_name=Zone.RED.value, durable=bool(rmq_settings[Values.RMQ_DURABLE_QUEUES]))
+        self.rmq.declare_queue(queue_name=Zone.BLUE.value, durable=bool(rmq_settings[Values.RMQ_DURABLE_QUEUES]))
+        self.rmq.declare_queue(queue_name=Zone.GREEN.value, durable=bool(rmq_settings[Values.RMQ_DURABLE_QUEUES]))
+
 
         self.rmq.queue_bind(Zone.RED.value, rmq_settings[Values.RMQ_EXCHANGE_NAME],
                             rmq_settings[Values.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY])

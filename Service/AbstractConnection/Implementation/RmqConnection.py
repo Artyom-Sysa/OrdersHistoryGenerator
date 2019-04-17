@@ -5,6 +5,7 @@ import pika
 from Service.AbstractConnection.AbstractConnection import AbstractConnection
 from pika import exceptions
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import DefaultPythonLoggingService as Logger
+from pika.spec import BasicProperties
 
 
 class RmqConnection(AbstractConnection):
@@ -17,6 +18,7 @@ class RmqConnection(AbstractConnection):
         self.__port = None
         self.__virtual_host = None
         self.exchanges_bindings = dict()
+        self.consume_info = dict()
 
     def open(self, user=pika.connection.Parameters.DEFAULT_USERNAME,
              password=pika.connection.Parameters.DEFAULT_PASSWORD,
@@ -39,6 +41,7 @@ class RmqConnection(AbstractConnection):
 
         except pika.exceptions.AMQPError as err:
             Logger.error(__file__, err.args)
+            return None
 
     def close(self, *args, **kwargs):
         try:
@@ -70,9 +73,9 @@ class RmqConnection(AbstractConnection):
         except pika.exceptions.AMQPError as err:
             Logger.error(__file__, err.args)
 
-    def declare_queue(self, queue_name):
+    def declare_queue(self, queue_name, durable=True,exclusive=False, auto_delete=False):
         try:
-            return self.channel.queue_declare(queue=queue_name)
+            return self.channel.queue_declare(queue=queue_name, durable=durable,exclusive=exclusive,auto_delete=auto_delete)
         except pika.exceptions.AMQPError as err:
             Logger.error(__file__, err.args)
 
@@ -123,30 +126,35 @@ class RmqConnection(AbstractConnection):
             Logger.error(__file__, err.args)
 
     def publish(self, exchange_name, routing_key, body, properties=None, mandatory=False):
-        fail = True
-        while fail:
+        while True:
             try:
                 self.channel.basic_publish(exchange=exchange_name, routing_key=routing_key,
                                            body=body, properties=properties,
                                            mandatory=mandatory)
-                fail = False
-            except pika.exceptions.AMQPError as err:
-                self.reconfig()
-            except AttributeError:
+                break
+            except:
                 self.reconfig()
 
-    def consume(self, queue_name, on_consume_callback):
+    def consume(self, queue_name, on_consume_callback, reconnect=False):
         try:
+            if not reconnect:
+                self.consume_info[queue_name] = on_consume_callback
             self.channel.basic_consume(queue=queue_name, on_message_callback=on_consume_callback)
+
         except pika.exceptions.AMQPError as err:
             Logger.error(__file__, err.args)
 
     def start_consuming(self):
-        try:
-            self.channel.start_consuming()
-        except pika.exceptions.AMQPError as err:
-            Logger.error(__file__, err.args)
-            self.reconfig()
+        while True:
+            try:
+                #self.channel.basic_qos(prefetch_count=1)
+                self.channel.start_consuming()
+                break
+            except:
+                self.reconfig()
+
+                for queue_name in self.consume_info:
+                    self.consume(queue_name, self.consume_info[queue_name],reconnect=True)
 
     def stop_consuming(self):
         try:
@@ -159,11 +167,5 @@ class RmqConnection(AbstractConnection):
                      password=self.__password,
                      host=self.__host,
                      port=self.__port,
-                     virtual_host=self.__virtual_host) is not None:
-            for exchange_name in self.exchanges_bindings:
-                self.declare_exchange(exchange_name=exchange_name,
-                                      exchange_type=self.exchanges_bindings[exchange_name][0])
-                for queue in self.exchanges_bindings[exchange_name][1:]:
-                    self.queue_bind(queue_name=queue, exchange_name=exchange_name)
-        else:
+                     virtual_host=self.__virtual_host) is None:
             time.sleep(1)

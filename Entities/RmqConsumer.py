@@ -28,6 +28,7 @@ class RmqConsumer:
         self.consumed_data = []
         self.previous_time = 0
         self.stop_messages_count = 0
+        self.last=0
 
     def consume(self):
         Logger.info(__file__, 'Configuration consumer...')
@@ -57,6 +58,7 @@ class RmqConsumer:
         self.stop_messages_count = 0
         self.rmq.start_consuming()
 
+
     def configurate_db_service(self):
         Logger.info(__file__, 'Configuration database service...')
 
@@ -81,6 +83,8 @@ class RmqConsumer:
         if body == b'stop':
             self.stop_messages_count += 1
             if self.stop_messages_count == 3:
+                self.send_consumed_data_to_mysql()
+
                 self.rmq.stop_consuming()
                 self.finish_event.set()
         else:
@@ -90,7 +94,7 @@ class RmqConsumer:
 
             self.to_data_list(order_record)
 
-            if len(self.consumed_data) >= self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE]:
+            if len(self.consumed_data) == self.configs.settings[Values.GENERAL_SECTION_NAME][Values.BATCH_SIZE]:
                 OrderHistoryMaker.add_time_statistic('Consuming data from RabbitMQ', (
                         datetime.datetime.now() - self.previous_time).total_seconds() * 1000)
                 Logger.info(__file__, "Batch size data consumed")

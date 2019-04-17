@@ -1,6 +1,7 @@
-FROM python:3.7.2
+FROM python:3.7.3-alpine3.9
+ 
 COPY . .
+    
 RUN pip install -r ./requirements.txt 
-RUN python3 ./Launcher.py
-EXPOSE 3306
-EXPOSE 5762
+
+CMD [ "python", "Launcher.py"]

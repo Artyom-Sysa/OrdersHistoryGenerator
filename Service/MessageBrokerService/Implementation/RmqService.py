@@ -5,7 +5,6 @@ from Service.AbstractConnection.Implementation.RmqConnection import RmqConnectio
 from Service.LoggerService.Implementation.DefaultPythonLoggingService import DefaultPythonLoggingService as Logger
 import pika
 
-
 class RmqService(MessabeBrokerService):
     def __init__(self):
         self.conn = None
@@ -47,7 +46,7 @@ class RmqService(MessabeBrokerService):
         Logger.debug(__file__, 'Closing RMQ connection')
         self.conn.close()
 
-    def publish(self, exchange_name, routing_key, body, properties=None, mandatory=False, *args, **kwargs):
+    def publish(self, exchange_name, routing_key, body, properties=pika.spec.BasicProperties(delivery_mode=2), mandatory=False, *args, **kwargs):
         '''
         Sending body to exchange with routing key
 
@@ -61,7 +60,7 @@ class RmqService(MessabeBrokerService):
         :param kwargs:
         :return:
         '''
-        self.conn.publish(exchange_name, routing_key, body, properties=properties, mandatory=mandatory)
+        self.conn.publish(exchange_name, routing_key, body, properties=properties, mandatory=mandatory,)
 
     def declare_exchange(self, exchange_name, exchange_type, passive=False, durable=True, auto_delete=False):
         '''
@@ -84,7 +83,7 @@ class RmqService(MessabeBrokerService):
                                           auto_delete=auto_delete
                                           )
 
-    def declare_queue(self, queue_name):
+    def declare_queue(self, queue_name, durable):
         '''
         Declare new queue
 
@@ -93,7 +92,7 @@ class RmqService(MessabeBrokerService):
         '''
 
         Logger.debug(__file__, 'Declaring queue with name {}'.format(queue_name))
-        return self.conn.declare_queue(queue_name=queue_name)
+        return self.conn.declare_queue(queue_name=queue_name, durable=durable)
 
     def queue_bind(self, queue_name, exchange_name, routing_key=None):
         '''

@@ -24,7 +24,8 @@ class Configuration:
                 ValuesNames.ORDER_HISTORY_WRITE_FILE_PATH: os.path.join('.', 'Resources', 'Result.csv'),
                 ValuesNames.CURRENCY_PAIRS_FILE_PATH: os.path.join('.', 'Resources', 'CurrencyPairs.txt'),
                 ValuesNames.TAGS_FILE_PATH: os.path.join('.', 'Resources', 'Tags.txt'),
-                ValuesNames.DEFAULT_SETTING_FILE_PATH: os.path.join('.', 'Resources', 'settings.ini')
+                ValuesNames.DEFAULT_SETTING_FILE_PATH: os.path.join('.', 'Resources', 'settings.ini'),
+                ValuesNames.REPORTER_DELAY: 2
             },
             ValuesNames.LOGGER_SECTION_NAME: {
                 ValuesNames.LOGGING_CONF_FILE_PATH: os.path.join('.', 'Resources', 'logging.conf'),
@@ -47,6 +48,7 @@ class Configuration:
                 ValuesNames.RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY: 'r.order.red-zone.order-history-generator',
                 ValuesNames.RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY: 'r.order.blue-zone.order-history-generator',
                 ValuesNames.RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY: 'r.order.green-zone.order-history-generator',
+                ValuesNames.RMQ_DURABLE_QUEUES: True
             },
             ValuesNames.PERIODS_SIZE_GENERATOR: {
                 LCGParams.SEED.value: 5,
@@ -201,6 +203,7 @@ class ValuesNames:
     CURRENCY_PAIRS_FILE_PATH = 'currency_pairs_file_path'
     TAGS_FILE_PATH = 'tags_file_path'
     DEFAULT_SETTING_FILE_PATH = 'default_setting_file_path'
+    REPORTER_DELAY ='reporter_seconds_delay'
 
     GENERAL_SECTION_NAME = 'GENERAL'
     LOGGER_SECTION_NAME = 'LOGGER'
@@ -294,7 +297,8 @@ class ValuesNames:
     RMQ_EXCHANGE_TYPE = 'rabbitmq_exchange_type'
     RMQ_EXCHANGE_RED_RECORDS_ROUTING_KEY = 'rabbitmq_red_records_routing_key'
     RMQ_EXCHANGE_BLUE_RECORDS_ROUTING_KEY = 'rabbitmq_blue_records_routing_key'
-    RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY = 'rabbitmq_gree_records_routing_key'
+    RMQ_EXCHANGE_GREEN_RECORDS_ROUTING_KEY = 'rabbitmq_green_records_routing_key'
+    RMQ_DURABLE_QUEUES = 'rabbitmq_queues_durable'
 
     MYSQL_INSERT_QUERY = 'INSERT INTO `orders_history`.`history`(`order_id`, `direction_id`, `currency_pair`, `init_px`, `fill_px`, `init_vol`, `fill_vol`,`status_id`, `datetime`, `tags`, `description`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
 

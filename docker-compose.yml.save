@@ -4,16 +4,16 @@ services:
   mysql:
     image: mysql:5.7
     restart: always
-    hostname: "mysql"
     environment:
       MYSQL_ROOT_PASSWORD: 'root'
-    volumes:
-      - ./sql:/docker-entrypoint-initdb.d
     ports:
       - '3306:3306'
+    volumes:
+      - ./dump.sql:/docker-entrypoint-initdb.d/dump
+.sql
   rabbitmq:
     image: "rabbitmq:3.7.14-management-alpine"
-    hostname: "rabbitmq"
+    hostname: "localhost"
     environment:
       RABBITMQ_DEFAULT_USER: "guest"
       RABBITMQ_DEFAULT_PASS: "guest"
