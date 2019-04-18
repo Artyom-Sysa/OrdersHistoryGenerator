@@ -35,6 +35,30 @@ This records consumed from RabbitMQ by subscriber in other thread and send it to
 ```bash
 $ git clone https://github.com/Artyom-Sysa/OrdersHistoryGenerator.git
 ```
+
+### Docker
+
+Install Docker and Docker Compose if they are missing: https://docs.docker.com/install/
+
+Run MySQL and RabbitMQ services:
+
+```bash
+$ docker-compose up
+```
+
+Build Docker image:
+
+```bash
+$ docker build -t history .
+```
+
+Run container: 
+
+```bash
+$ docker run --network=ordershistorygenerator_default history
+```
+
+### Native
 #### Python:
 Chech if `python` exists:
 ```bash
