@@ -1,10 +1,9 @@
 # Orders History Generator
-Generator of orders history
+This application generates history of orders.
 
-Overview
---
+The history contains records about the status of each order. 
 
-Order format:
+####Order format:
 ```
     ID - id of order
     Direction - order direction (can be either "Buy" or "Sell")
@@ -18,12 +17,17 @@ Order format:
     Tags - order tags
     Desription - order descriptionn
 ```
+
+
 All orders records divided distributed between 3 zones:
 * `Red` - order started in previous periods of trading and finish in current period
 * `Green` - order start and finish in same period 
 * `Blue` - order start in current period and finish in next periods
 
 Trading execute on period `Friday-Tuesday except weekends`
+
+History is formed for several periods.
+
 
 #### Pub / Sub
   
