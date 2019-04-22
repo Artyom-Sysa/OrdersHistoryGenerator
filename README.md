@@ -3,7 +3,7 @@ This application generates history of orders.
 
 The history contains records about the status of each order. 
 
-####Order format:
+#### Order format
 ```
     ID - id of order
     Direction - order direction (can be either "Buy" or "Sell")
